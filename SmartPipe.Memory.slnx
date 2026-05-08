@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/SmartPipe.Memory.Benchmarks/SmartPipe.Memory.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/SmartPipe.Memory.Extensions/SmartPipe.Memory.Extensions.csproj" />
+    <Project Path="src/SmartPipe.Memory.Health/SmartPipe.Memory.Health.csproj" />
+    <Project Path="src/SmartPipe.Memory/SmartPipe.Memory.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SmartPipe.Memory.Extensions.Tests/SmartPipe.Memory.Extensions.Tests.csproj" />
+    <Project Path="tests/SmartPipe.Memory.Health.Tests/SmartPipe.Memory.Health.Tests.csproj" />
+    <Project Path="tests/SmartPipe.Memory.Tests/SmartPipe.Memory.Tests.csproj" />
+  </Folder>
+</Solution>
