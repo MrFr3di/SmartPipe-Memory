@@ -2,7 +2,8 @@
 
 **Embedded graph memory layer for the SmartPipe ecosystem.**
 
-[![NuGet](https://img.shields.io/nuget/v/SmartPipe.Memory)](https://www.nuget.org/packages/SmartPipe.Memory)
+[![CI](https://github.com/MrFr3di/SmartPipe-Memory/actions/workflows/ci.yml/badge.svg)](https://github.com/MrFr3di/SmartPipe-Memory/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/SmartPipe.Memory.svg)](https://www.nuget.org/packages/SmartPipe.Memory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com)
 
