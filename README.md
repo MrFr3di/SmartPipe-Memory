@@ -66,7 +66,7 @@ await foreach (var r in query.ShortestPath("f1", "f2", "DuplicateOf").ExecuteAsy
 | [API Reference](docs/api-reference.md) | All public types and methods |
 | [Query Reference](docs/query-reference.md) | Fluent API usage guide |
 | [Architecture](docs/architecture.md) | Design decisions |
-| [Changelog](changelog.md) | Version history |
+| [Changelog](docs/changelog.md) | Version history |
 
 ## Dependencies
 
