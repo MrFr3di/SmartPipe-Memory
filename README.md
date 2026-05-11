@@ -61,12 +61,12 @@ await foreach (var r in query.ShortestPath("f1", "f2", "DuplicateOf").ExecuteAsy
 
 | Document | Description |
 |:---|:---|
-| [Features](docs/features.md) | Complete feature reference |
-| [Getting Started](docs/getting-started.md) | Quick start guide |
-| [API Reference](docs/api-reference.md) | All public types and methods |
-| [Query Reference](docs/query-reference.md) | Fluent API usage guide |
-| [Architecture](docs/architecture.md) | Design decisions |
-| [Changelog](docs/changelog.md) | Version history |
+| [Features](src/docs/features.md) | Complete feature reference |
+| [Getting Started](src/docs/getting-started.md) | Quick start guide |
+| [API Reference](src/docs/api-reference.md) | All public types and methods |
+| [Query Reference](src/docs/query-reference.md) | Fluent API usage guide |
+| [Architecture](src/docs/architecture.md) | Design decisions |
+| [Changelog](CHANGELOG.md) | Version history |
 
 ## Dependencies
 
