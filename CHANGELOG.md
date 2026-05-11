@@ -2,6 +2,31 @@
 
 All notable changes to the SmartPipe.Memory project.
 
+## [0.1.2] — 2026-05-11
+
+### Added
+
+- **Topological sort (Kahn's algorithm)** via `MemoryQueryBuilder.TopologicalSort()`.
+- **Cycle detection** via `MemoryQueryBuilder.HasCycles()`.
+- **Strongly connected components (Tarjan's algorithm)** via `MemoryQueryBuilder.FindSCC()`.
+- **Weakly connected components (Union‑Find)** via `MemoryQueryBuilder.FindWCC()`.
+- `GetAllNodes()` method on `IGraphStore` and implementations.
+- `PaddedCounter64` and `PaddedCounter32` to prevent false sharing in `MemoryMetrics`.
+- Periodic WAL checkpoint in `SqliteWALStore` (`PRAGMA wal_checkpoint(TRUNCATE)`) to keep the write‑ahead log under control.
+- Iterative version of Tarjan's SCC to prevent `StackOverflowException` on large graphs.
+- Connectivity stress test in sandbox (`dotnet run --project sandbox -- connectivity`).
+
+### Changed
+
+- `MemoryMetrics` now uses `PaddedCounter64` for cache hit/miss counters, eliminating false sharing.
+- `SqliteWALStore.DisposeAsync` performs a final checkpoint and clears connection pool.
+- `StronglyConnectedComponents` now uses iterative stack instead of recursion.
+
+### Fixed
+
+- `DateTime` UTC normalization in `SqliteWALStore` – `ValidFrom`/`ValidTo` now correctly stored and compared as UTC.
+- File deletion after `DisposeAsync` in `SqliteWALStore` (requires pool cleanup and delay on Windows).
+
 ## [0.1.1] — 2026-05-11
 
 ### Added
@@ -33,7 +58,6 @@ All notable changes to the SmartPipe.Memory project.
 - **`SqliteConnection.ClearPool` and `PRAGMA wal_checkpoint(TRUNCATE)`** on `DisposeAsync` for clean file release.
 - **DateTime normalization to UTC** in `SqliteWALStore.ReadNode/ReadEdge` (fixes `AsOf` queries).
 - **Sandbox project** with stress, temporal, chaos, and health scenarios.
-- **Benchmark project** comparing SmartPipe.Memory vs QuikGraph on Pokec and Amazon Reviews datasets.
 - **185 tests** (up from 123)
 
 ### Changed

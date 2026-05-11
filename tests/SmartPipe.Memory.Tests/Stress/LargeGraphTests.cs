@@ -1,6 +1,9 @@
 using SmartPipe.Memory.Graph;
 using SmartPipe.Memory.Model;
 using SmartPipe.Memory.Storage;
+using SmartPipe.Memory.Query;
+using SmartPipe.Memory.Caching;
+using System.Diagnostics;
 
 namespace SmartPipe.Memory.Tests.Stress;
 
@@ -142,6 +145,25 @@ public sealed class LargeGraphTests : IAsyncDisposable
             count++;
 
         Assert.Equal(5000, count);
+    }
+
+    [Fact]
+    public async Task TopologicalSort_LargeGraph_CompletesInReasonableTime()
+    {
+        for (int i = 0; i < 100_000; i++)
+            await _store.UpsertNodeAsync(new Node { Id = $"n{i}", Type = "File" });
+
+        for (int i = 0; i < 99_999; i++)
+            await _store.UpsertEdgeAsync(new Edge { FromNodeId = $"n{i}", ToNodeId = $"n{i + 1}", Type = EdgeType.DerivedFrom });
+
+        var query = MemoryQueryBuilder.Create(_store, new NodeCache(10_000));
+        var sw = Stopwatch.StartNew();
+        var result = query.TopologicalSort();
+        sw.Stop();
+
+        Assert.Equal(100_000, result.Sorted.Count);
+        Assert.False(result.HasCycles);
+        Assert.True(sw.ElapsedMilliseconds < 5000); // должно быть быстро
     }
 
     public ValueTask DisposeAsync() => _store.DisposeAsync();

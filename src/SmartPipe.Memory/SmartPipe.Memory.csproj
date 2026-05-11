@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Authors>SmartPipe</Authors>
     <Description>
       Embedded graph memory layer for the SmartPipe ecosystem. Type-safe Fluent API,

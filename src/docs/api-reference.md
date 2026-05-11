@@ -104,6 +104,7 @@
 | `QueryInsightsAsync(query, ct)` | `IAsyncEnumerable<Edge>` | Query insights |
 | `GetWeakenedEdgesFromAsync(id, ct)` | `Task<IReadOnlyList<Edge>>` | Get edges with weight below 0.3 |
 | `GetOutEdges()` | `IReadOnlyDictionary<string, IReadOnlyList<Edge>>` | All outgoing edges |
+| `GetAllNodes()` | `IReadOnlyDictionary<string, Node>` | All nodes in the graph |
 | `InsertInsightAsync(insight, ct)` | `Task` | Save insight |
 | `UpdateNodeHealthAsync(...)` | `Task` | Update health with version check |
 | `MetricsChannel` | `ChannelWriter<MetricsEntry>` | Metrics buffer |
@@ -191,6 +192,10 @@ Exposes `Classifier : AutoClassifier?` (delegates to in-memory store).
 | `FindClusters(ct)` | `IAsyncEnumerable<QueryResult>` | Run Leiden clustering |
 | `EstimateNeighbors(nodeId)` | `double` | Estimate unique neighbors |
 | `HasDegree(nodeId)` | `int` | Count outgoing edges |
+| `TopologicalSort()` | `TopologicalSort.Result` | Kahn's algorithm – returns sorted nodes and cycle info |
+| `HasCycles()` | `bool` | Quick cycle detection |
+| `FindSCC()` | `List<List<string>>` | Tarjan's algorithm – strongly connected components |
+| `FindWCC()` | `List<List<string>>` | Union‑Find – weakly connected components |
 | `ExecuteAsync(ct)` | `IAsyncEnumerable<QueryResult>` | Execute query |
 
 ### MemoryQueryExecutor
@@ -204,6 +209,7 @@ Exposes `Classifier : AutoClassifier?` (delegates to in-memory store).
 | `ExecuteAsync(query, ct)` | `IAsyncEnumerable<QueryResult>` | Execute query |
 | `ClusterAsync(ct)` | `Task<IReadOnlyList<Cluster>>` | Run clustering |
 | `GetOutEdges()` | `IReadOnlyDictionary<string, IReadOnlyList<Edge>>` | All outgoing edges |
+| `GetAllNodes()` | `IReadOnlyDictionary<string, Node>` | All nodes in the graph |
 
 ### MemoryQuery
 

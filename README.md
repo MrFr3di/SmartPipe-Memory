@@ -15,9 +15,9 @@ SmartPipe.Memory is an embedded graph memory layer with predictive analytics, de
 
 | Package | Description | Version |
 |:---|:---|:---|
-| `SmartPipe.Memory` | Core graph engine | v0.1.1 |
-| `SmartPipe.Memory.Extensions` | Integration with SmartPipe.Core | v0.1.1 |
-| `SmartPipe.Memory.Health` | Predictive analytics & health monitoring | v0.1.1 |
+| `SmartPipe.Memory` | Core graph engine | v0.1.2 |
+| `SmartPipe.Memory.Extensions` | Integration with SmartPipe.Core | v0.1.2 |
+| `SmartPipe.Memory.Health` | Predictive analytics & health monitoring | v0.1.2 |
 
 ## Installation
 
@@ -46,28 +46,30 @@ await foreach (var r in query.ShortestPath("f1", "f2", "DuplicateOf").ExecuteAsy
 
 - Type-safe Fluent API — no text-based query language
 - In-memory traversal engine (BFS, Dijkstra, Leiden clustering)
+- Graph connectivity analysis — topological sort, cycle detection, SCC, WCC
 - Predictive analytics — HealthVector, BottleneckPredictor, MemoryDecayPolicy
 - Time-travel queries — AsOf and Between with full bitemporal support
 - AND/OR composable filters with WhereNode, MinWeight, MinConfidence
 - Centrality algorithms — PageRank, BetweennessCentrality, DegreeCentrality
 - Graph reordering for cache locality
 - Auto-classification of nodes and edges
-- SQLite WAL persistence with automatic recovery
+- SQLite WAL persistence with automatic recovery and checkpointing
+- False sharing prevention in metrics
 - OpenTelemetry metrics and tracing — ActivitySource, Meter, EventCounters
 - Dependency injection — AddSmartPipeMemory() / AddSmartPipeMemorySqlite()
 - Zero external servers — embedded in-process library
-- 185 tests, 0 failures
+- 201 tests, 0 failures — 79% line coverage, 65% branch coverage
 
 ## Documentation
 
 | Document | Description |
 |:---|:---|
-| [Features](src/docs/features.md) | Complete feature reference |
-| [Getting Started](src/docs/getting-started.md) | Quick start guide |
-| [API Reference](src/docs/api-reference.md) | All public types and methods |
-| [Query Reference](src/docs/query-reference.md) | Fluent API usage guide |
-| [Architecture](src/docs/architecture.md) | Design decisions |
-| [Changelog](CHANGELOG.md) | Version history |
+| [Features](https://github.com/MrFr3di/SmartPipe-Memory/blob/main/docs/features.md) | Complete feature reference |
+| [Getting Started](https://github.com/MrFr3di/SmartPipe-Memory/blob/main/docs/getting-started.md) | Quick start guide |
+| [API Reference](https://github.com/MrFr3di/SmartPipe-Memory/blob/main/docs/api-reference.md) | All public types and methods |
+| [Query Reference](https://github.com/MrFr3di/SmartPipe-Memory/blob/main/docs/query-reference.md) | Fluent API usage guide |
+| [Architecture](https://github.com/MrFr3di/SmartPipe-Memory/blob/main/docs/architecture.md) | Design decisions |
+| [Changelog](https://github.com/MrFr3di/SmartPipe-Memory/blob/main/CHANGELOG.md) | Version history |
 
 ## Dependencies
 

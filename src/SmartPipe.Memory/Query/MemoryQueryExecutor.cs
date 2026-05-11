@@ -191,4 +191,9 @@ public sealed class MemoryQueryExecutor
     {
         return _store.GetOutEdges();
     }
+
+    /// <summary>
+    /// Returns all nodes as a read-only dictionary.
+    /// </summary>
+    public IReadOnlyDictionary<string, Graph.Node> GetAllNodes() => _store.GetAllNodes();
 }

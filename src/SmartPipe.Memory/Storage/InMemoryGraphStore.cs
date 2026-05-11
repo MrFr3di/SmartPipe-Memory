@@ -332,6 +332,9 @@ public sealed class InMemoryGraphStore : IGraphStore
     }
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, Node> GetAllNodes() => _nodes;
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default)
     {
         if (_outEdges.TryGetValue(nodeId, out var edges))

@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using SmartPipe.Memory.Graph;
 using SmartPipe.Memory.Model;
 using SmartPipe.Memory.Algorithms.Classification;
+using SmartPipe.Memory.Infrastructure;
 
 
 namespace SmartPipe.Memory.Storage;
@@ -21,6 +22,9 @@ public sealed class SqliteWALStore : IGraphStore
     private readonly SemaphoreSlim _asyncLock = new(1, 1);
     private readonly InMemoryGraphStore _memoryStore;
 
+    private Timer? _checkpointTimer;
+    private readonly TimeSpan _checkpointInterval;
+
     private readonly Channel<MetricsEntry> _metricsChannel;
     private readonly List<Insight> _insights = new();
     private StoreState _state = StoreState.Running;
@@ -30,7 +34,8 @@ public sealed class SqliteWALStore : IGraphStore
     /// </summary>
     /// <param name="connectionString">Path to the SQLite database file.</param>
     /// <param name="metricsCapacity">Capacity of the metrics buffer channel.</param>
-    public SqliteWALStore(string connectionString = "memory.db", int metricsCapacity = 10000)
+    /// <param name="checkpointInterval">Interval at which the WAL checkpoint is automatically performed. Default: 60 seconds.</param>
+    public SqliteWALStore(string connectionString = "memory.db", int metricsCapacity = 10000, TimeSpan? checkpointInterval = null)
     {
         _connection = new SqliteConnection($"Data Source={connectionString}");
         _memoryStore = new InMemoryGraphStore(metricsCapacity);
@@ -38,6 +43,7 @@ public sealed class SqliteWALStore : IGraphStore
         {
             FullMode = BoundedChannelFullMode.DropOldest
         });
+        _checkpointInterval = checkpointInterval ?? TimeSpan.FromSeconds(60);
     }
 
     /// <inheritdoc />
@@ -71,6 +77,18 @@ public sealed class SqliteWALStore : IGraphStore
 
         await LoadAllNodesAsync(ct);
         await LoadAllEdgesAsync(ct);
+        // Start periodic WAL checkpoint to keep WAL file size under control
+        _checkpointTimer = new Timer(async _ =>
+        {
+            try
+            {
+                await PerformCheckpointAsync();
+            }
+            catch
+            {
+                // Logging would go here in production
+            }
+        }, null, _checkpointInterval, _checkpointInterval);
     }
 
     // -- Nodes --
@@ -303,6 +321,9 @@ public sealed class SqliteWALStore : IGraphStore
     => _memoryStore.GetOutEdges();
 
     /// <inheritdoc />
+    public IReadOnlyDictionary<string, Node> GetAllNodes() => _memoryStore.GetAllNodes();
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default)
         => _memoryStore.GetWeakenedEdgesFromAsync(nodeId, ct);
 
@@ -334,16 +355,13 @@ public sealed class SqliteWALStore : IGraphStore
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
-{
-        // Flush WAL to main database and truncate the wal file
-        using (var cmd = _connection.CreateCommand())
-        {
-            cmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
-            await cmd.ExecuteNonQueryAsync();
-        }
+    {
+        _checkpointTimer?.Dispose();
+        _checkpointTimer = null;
+
+        await PerformCheckpointAsync();
 
         SqliteConnection.ClearPool(_connection);
-        SqliteConnection.ClearAllPools();
         await _connection.CloseAsync();
         await _connection.DisposeAsync();
         _asyncLock.Dispose();
@@ -412,6 +430,23 @@ public sealed class SqliteWALStore : IGraphStore
             ValidTo = reader.IsDBNull(8) ? null : DateTimeOffset.Parse(reader.GetString(8)).UtcDateTime,
             TxTime = DateTimeOffset.Parse(reader.GetString(9)).UtcDateTime,
         };
+    }
+
+    private async Task PerformCheckpointAsync()
+    {
+        if (_state != StoreState.Running) return;
+
+        await _asyncLock.WaitAsync(TimeSpan.FromSeconds(5));
+        try
+        {
+            using var cmd = _connection.CreateCommand();
+            cmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+        finally
+        {
+            _asyncLock.Release();
+        }
     }
 
     private void ThrowIfNotRunning()

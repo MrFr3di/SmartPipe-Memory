@@ -22,7 +22,7 @@ pipeline.AddSource(mySource);
 pipeline.AddTransformer(myTransformer);
 pipeline.AddSink(mySink);
 
-// Connect memory to the pipeline - auto-registers topology and streams metrics
+// Connect memory to the pipeline - auto‑registers topology and streams metrics
 pipeline.UseMemory(store);
 
 await pipeline.RunAsync();
@@ -39,7 +39,7 @@ await pipeline.RunAsync();
 
 ## Dependencies
 
-- SmartPipe.Memory (>= 0.1.1)
+- SmartPipe.Memory (>= 0.1.2)
 - SmartPipe.Core (>= 1.0.5)
 
 ## License

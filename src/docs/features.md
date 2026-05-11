@@ -1,4 +1,4 @@
-# SmartPipe.Memory v0.1.1 — Complete Feature Reference
+# SmartPipe.Memory v0.1.2 — Complete Feature Reference
 
 ## Overview
 
@@ -66,6 +66,7 @@ Metadata — Additional data (Dictionary string, string or null)
 In‑memory graph store for testing and development. All traversals execute in memory for maximum performance.
 
 Features:
+
 - ConcurrentDictionary for nodes and edges
 - ReaderWriterLockSlim for write operations
 - All algorithms execute here (traversal, clustering, centrality)
@@ -79,6 +80,7 @@ Use when: Testing, CI, development, graphs up to 100K nodes.
 SQLite‑backed store with WAL mode for production.
 
 Features:
+
 - Loads all data into InMemoryGraphStore at startup
 - Writes to SQLite for durability
 - AsyncLock for exclusive SQLite access
@@ -108,27 +110,29 @@ Type‑safe C# API for building queries. No text‑based query language. Safety 
 
 ### MemoryQueryBuilder Methods
 
-Nodes(type) — Filter by node type: "File", "Record", "Transformer"
-Where(property, operator, value) — Filter by HealthScore, FailureProb, ResourceStrain, PredictedLatencyMs
-And() — Combine next filter with logical AND (default)
-Or() — Combine next filter with logical OR
-ConnectedVia(edgeType) — Filter by edge type
-StartFrom(nodeId) — Start traversal from this node
-To(nodeId) — Target node for pathfinding
-ShortestPath(from, to, via) — Find shortest path between nodes
-Traverse(edgeType, maxDepth) — Traverse graph from current start node
-MaxDepth(depth) — Maximum traversal depth
-Limit(n) — Maximum number of results
-OrderBy(property, descending) — Sort results
-AsOf(timestamp) — Time‑travel: return graph state at a point in time
-Between(from, to) — Time‑travel: return changes in a time range
-WhereNode(predicate) — Filter nodes during traversal
-MinWeight(weight) — Minimum edge weight for pathfinding
-MinConfidence(confidence) — Minimum edge confidence for pathfinding
-FindClusters() — Run Leiden clustering and return clusters
-EstimateNeighbors(nodeId) — Estimate unique neighbors using HyperLogLog
-HasDegree(nodeId) — Count direct outgoing edges
-ExecuteAsync() — Execute query and stream results
+| Method | Description |
+|:---|:---|
+| `Nodes(type)` | Filter by node type |
+| `Where(prop, op, val)` | Filter by property |
+| `And()` / `Or()` | Combine filters with AND / OR |
+| `ConnectedVia(edgeType)` | Filter by edge type |
+| `StartFrom(nodeId)` / `To(nodeId)` | Start / target for traversal |
+| `ShortestPath(from, to, via)` | Shortest path |
+| `Traverse(edgeType, maxDepth)` | Traverse graph |
+| `MaxDepth(depth)` | Set max depth |
+| `Limit(n)` | Limit results |
+| `OrderBy(prop, desc)` | Sort results |
+| `AsOf(timestamp)` / `Between(from, to)` | Time‑travel queries |
+| `WhereNode(predicate)` | Filter nodes during traversal |
+| `MinWeight(weight)` / `MinConfidence(confidence)` | Edge filtering |
+| `FindClusters()` | Leiden clustering |
+| `EstimateNeighbors(nodeId)` | HyperLogLog estimation |
+| `HasDegree(nodeId)` | Outgoing edge count |
+| `TopologicalSort()` | Kahn's algorithm – topological order + cycle nodes |
+| `HasCycles()` | Quick cycle detection |
+| `FindSCC()` | Tarjan's algorithm – strongly connected components |
+| `FindWCC()` | Union‑Find – weakly connected components |
+| `ExecuteAsync()` |  Execute query and stream results |
 
 ### FilterNode
 
@@ -202,6 +206,42 @@ Automatically classifies nodes by type based on properties (hash, path, sql, con
 Classifies edges based on hash equality and version patterns.
 Enabled via EnableAutoClassification in MemoryConfiguration.
 
+### Graph Connectivity
+
+#### TopologicalSort (Kahn's algorithm)
+
+Performs a topological sort on a directed graph. If the graph contains cycles, the sorted list is partial, and the cyclic nodes are reported separately.
+
+- Complexity: O(V + E)
+- Input: all nodes and outgoing edges
+- Output: `Result` containing `Sorted` (ordered list), `HasCycles` (bool), `CyclicNodes` (list of nodes in cycles)
+- Accessible via `MemoryQueryBuilder.TopologicalSort()`
+
+#### HasCycles
+
+Quickly checks whether the graph contains at least one cycle. Internally runs the same Kahn's algorithm and stops early when a cycle is detected.
+
+- Complexity: O(V + E)
+- Accessible via `MemoryQueryBuilder.HasCycles()`
+
+#### StronglyConnectedComponents (Tarjan's algorithm)
+
+Finds all strongly connected components (SCC) in a directed graph. Uses an iterative implementation to avoid stack overflow on large graphs.
+
+- Complexity: O(V + E)
+- Input: all nodes and outgoing edges
+- Output: list of SCCs, each as a list of node identifiers
+- Accessible via `MemoryQueryBuilder.FindSCC()`
+
+#### WeaklyConnectedComponents (Union‑Find)
+
+Finds all weakly connected components by treating the directed graph as undirected. Uses path compression and union by rank.
+
+- Complexity: O(E × α(V))
+- Input: all nodes and outgoing edges
+- Output: list of WCCs, each as a list of node identifiers
+- Accessible via `MemoryQueryBuilder.FindWCC()`
+
 ## Predictive Analytics (SmartPipe.Memory.Health)
 
 ### HealthVector
@@ -274,6 +314,14 @@ ObjectPoolCapacity = 256
 DefaultDatabaseName = "memory.db"
 DegradedHealthThreshold = 0.7
 WeakenedEdgeThreshold = 0.3
+
+### PaddedCounter 
+
+`PaddedCounter64` and `PaddedCounter32` are atomic counters padded to 64 bytes (one CPU cache line) to eliminate false sharing in parallel code paths. Used in `MemoryMetrics` for accurate performance tracking.
+
+### WAL Checkpoint
+
+`SqliteWALStore` now runs a background timer that periodically executes `PRAGMA wal_checkpoint(TRUNCATE)`. This keeps the write‑ahead log file compact and prevents unbounded growth during intensive write workloads.
 
 ## Integration with SmartPipe.Core
 

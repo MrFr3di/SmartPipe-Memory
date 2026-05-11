@@ -1,8 +1,8 @@
-# SmartPipe.Memory Query Reference v0.1.1
+# SmartPipe.Memory Query Reference v0.1.2
 
 ## Overview
 
-SmartPipe.Memory uses a type-safe Fluent API for all queries. No text-based query language. Every query is validated by the C# compiler.
+SmartPipe.Memory uses a type‑safe Fluent API for all queries. No text‑based query language. Every query is validated by the C# compiler.
 
 ## Basic Queries
 
@@ -155,7 +155,7 @@ SmartPipe.Memory uses a type-safe Fluent API for all queries. No text-based quer
         Console.WriteLine($"{result.Node.Label} at depth {result.Depth}");
     }
 
-## Time-Travel Queries
+## Time‑Travel Queries
 
 ### Query graph at a point in time (AsOf)
 
@@ -175,6 +175,36 @@ SmartPipe.Memory uses a type-safe Fluent API for all queries. No text-based quer
         .ExecuteAsync())
     {
         Console.WriteLine($"{result.Node.Label} changed in last 30 days");
+    }
+
+## Graph Connectivity (NEW in v0.1.2)
+
+### Topological sort (Kahn's algorithm)
+
+    var result = query.TopologicalSort();
+    Console.WriteLine($"Sorted nodes: {string.Join(", ", result.Sorted)}");
+    Console.WriteLine($"Has cycles: {result.HasCycles}");
+    Console.WriteLine($"Cyclic nodes: {string.Join(", ", result.CyclicNodes)}");
+
+### Check for cycles
+
+    bool hasCycles = query.HasCycles();
+    Console.WriteLine($"Graph contains cycles: {hasCycles}");
+
+### Find strongly connected components (Tarjan's algorithm)
+
+    var components = query.FindSCC();
+    foreach (var component in components)
+    {
+        Console.WriteLine($"SCC: {string.Join(", ", component)}");
+    }
+
+### Find weakly connected components (Union‑Find)
+
+    var components = query.FindWCC();
+    foreach (var component in components)
+    {
+        Console.WriteLine($"WCC: {string.Join(", ", component)}");
     }
 
 ## Clustering

@@ -58,6 +58,7 @@ Bitemporal fields (ValidFrom, ValidTo, TxTime) on every node and edge enable tim
 Primary engine for all graph traversals.
 
 Data structures:
+
 - ConcurrentDictionary for nodes
 - ConcurrentDictionary for outgoing edges
 - ReaderWriterLockSlim for write serialization
@@ -70,24 +71,28 @@ All traversal, clustering, and centrality algorithms execute directly on in‑me
 SQLite for durability only.
 
 Startup:
+
 1. Open SQLite connection
 2. Execute CreateTables (idempotent, includes insights table)
 3. Load all nodes into InMemoryGraphStore
 4. Load all edges into InMemoryGraphStore
 
 Write path:
+
 1. Acquire AsyncLock (SemaphoreSlim)
 2. Write to SQLite
 3. Update InMemoryGraphStore
 4. Release AsyncLock
 
 Read path:
+
 1. Delegates directly to InMemoryGraphStore
 2. No SQLite access for reads
 
 ### GraphTraversalEngine (internal)
 
 Shared engine for BFS‑based pathfinding and traversal. Used by both InMemoryGraphStore and SqliteWALStore. Supports:
+
 - Node filtering (WhereNode)
 - Minimum edge weight (MinWeight)
 - Minimum edge confidence (MinConfidence)
@@ -104,6 +109,7 @@ Shared engine for BFS‑based pathfinding and traversal. Used by both InMemoryGr
 8. EstimateNeighbors / HasDegree: direct calls to CardinalityEstimator / DegreeCentrality.
 
 Cache integration:
+
 - MemoryQueryExecutor checks NodeCache.TryGet before query.
 - On cache hit, returns cached node.
 - On cache miss, queries store and calls NodeCache.Set.
@@ -111,6 +117,7 @@ Cache integration:
 ## Time‑Travel Queries
 
 MemoryQuery supports:
+
 - AsOf(timestamp) — returns graph state at a specific point in time.
 - Between(from, to) — returns changes within a time range.
 
@@ -119,34 +126,49 @@ Filters: ValidFrom <= AsOf AND (ValidTo IS NULL OR ValidTo > AsOf).
 ## Algorithms
 
 ### GraphTraversalEngine
+
 - BFS‑based shortest path with node/edge filtering.
 - BFS‑based traversal with node/edge filtering.
 - Complexity: O(V + E).
 
 ### LeidenClusterer
+
 - Community detection via modularity optimization (Newman‑Girvan).
 - Complexity: O(E) per iteration.
 
 ### PageRank
+
 - Node importance computation.
 - Complexity: O(E) per iteration.
 
 ### BetweennessCentrality
+
 - Bridge node detection (Brandes' algorithm).
 - Complexity: O(V × E) full, O(V × E) subset.
 
 ### GraphReorderer
+
 - Reorders nodes for cache locality (by community, degree, accessibility).
 
 ### DegreeCentrality
+
 - Direct connection count.
 - Complexity: O(1).
 
 ### CardinalityEstimator
+
 - Unique neighbor estimation via HyperLogLog (SmartPipe.Core).
 - Complexity: O(1) memory (~4KB), ~3% accuracy.
 
+### Graph Connectivity
+
+- **TopologicalSort (Kahn)**: Finds a topological order of nodes in a directed acyclic graph. Detects and reports cyclic nodes.
+- **HasCycles**: Quick cycle detection based on Kahn's algorithm.
+- **StronglyConnectedComponents (Tarjan)**: Finds all SCCs using an iterative stack‑based implementation.
+- **WeaklyConnectedComponents (Union‑Find)**: Finds all WCCs by treating edges as undirected, with path compression and union by rank.
+
 ### AutoClassifier
+
 - Detects node type from properties (hash, path, sql, connectionString).
 - Detects edge type from nodes (DuplicateOf, VersionOf).
 - Enabled via EnableAutoClassification flag.
@@ -154,34 +176,43 @@ Filters: ValidFrom <= AsOf AND (ValidTo IS NULL OR ValidTo > AsOf).
 ## Predictive Analytics (SmartPipe.Memory.Health)
 
 ### HealthVector
+
 - Aggregates predicted latency, throughput, failure probability, resource strain, percentiles.
 - HealthScore formula: 1.0 - (0.35*FailureProbability + 0.35*LatencyComponent + 0.30*ResourceStrain).
 
 ### HealthVectorCalculator
+
 - Uses AdaptiveMetrics and ExponentialHistogram from SmartPipe.Core.
 - Computes HealthVector from MetricsEntry history.
 
 ### BottleneckPredictor
+
 - Temporal comparison of current vs historical HealthVector.
 - Provides confidence and estimated time to impact.
 
 ### InsightGenerator
+
 - Creates Insight objects from predictions, retry budget exhaustion, clusters.
 
 ### CognitiveConsolidation
+
 - Merges repeated insights into higher‑confidence consolidated insights.
 
 ### MemoryDecayPolicy
+
 - Edge weight decay following Ebbinghaus‑like curve.
 - Adaptive: access frequency slows decay.
 
 ### ConflictResolver
+
 - Weakens existing edges on new contradictory facts instead of deletion.
 
 ### InsightAgent
+
 - Background service that periodically analyzes unhealthy nodes and generates insights.
 
 ### MetricsBackgroundConsumer
+
 - Reads metrics from channel, computes HealthVector, updates node health.
 
 ## Resilience
@@ -189,6 +220,14 @@ Filters: ValidFrom <= AsOf AND (ValidTo IS NULL OR ValidTo > AsOf).
 CircuitBreaker: Ready for SqliteWALStore integration.
 Optimistic concurrency: Node.Version field prevents lost updates.
 Graceful shutdown: DrainAsync stops writes, flushes metrics channel.
+
+## False Sharing Prevention (v0.1.2)
+
+`PaddedCounter64` and `PaddedCounter32` (in `Infrastructure/`) are atomic counters padded to 64 bytes (one CPU cache line). They are used in `MemoryMetrics` to eliminate false sharing between cache hit/miss counters and query execution counters, ensuring accurate performance measurements in multi‑threaded scenarios.
+
+## WAL Checkpoint (v0.1.2)
+
+`SqliteWALStore` runs a background timer (`System.Threading.Timer`) that periodically executes `PRAGMA wal_checkpoint(TRUNCATE)`. This keeps the write‑ahead log file size under control and prevents performance degradation during long‑running write workloads.
 
 ## Observability
 

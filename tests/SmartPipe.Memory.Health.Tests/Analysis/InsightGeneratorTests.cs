@@ -48,12 +48,12 @@ public sealed class InsightGeneratorTests : IAsyncDisposable
         var current = new MetricsEntry
         {
             NodeId = "n1",
-            Timestamp = System.DateTime.UtcNow,
+            Timestamp = DateTime.UtcNow,
             Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 600 }
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = System.DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 } }
+            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 } }
         };
 
         var insight = await _generator.AnalyzeNodeAsync("n1", current, historical);
@@ -67,12 +67,12 @@ public sealed class InsightGeneratorTests : IAsyncDisposable
         var current = new MetricsEntry
         {
             NodeId = "n1",
-            Timestamp = System.DateTime.UtcNow,
+            Timestamp = DateTime.UtcNow,
             Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 }
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = System.DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 } }
+            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 } }
         };
 
         var insight = await _generator.AnalyzeNodeAsync("n1", current, historical);

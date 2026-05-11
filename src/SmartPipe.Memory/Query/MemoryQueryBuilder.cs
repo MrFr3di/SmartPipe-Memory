@@ -1,5 +1,6 @@
-using SmartPipe.Memory.Model;
 using System.Runtime.CompilerServices;
+using SmartPipe.Memory.Algorithms.Connectivity;
+using SmartPipe.Memory.Model;
 
 namespace SmartPipe.Memory.Query;
 
@@ -239,7 +240,6 @@ public sealed class MemoryQueryBuilder
     /// <summary>Run Leiden clustering and return discovered clusters.</summary>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Async stream of Cluster results.</returns>
-    
     public IAsyncEnumerable<QueryResult> FindClusters(CancellationToken ct = default)
     {
         return ExecuteClusterAsync(ct);
@@ -283,5 +283,50 @@ public sealed class MemoryQueryBuilder
         return centrality.Compute(
             _executor.GetOutEdges(),
             nodeId);
+    }
+
+    /// <summary>
+    /// Performs topological sort using Kahn's algorithm.
+    /// Returns sorted nodes and cycle information.
+    /// </summary>
+    /// <returns>A result containing sorted nodes and any cyclic nodes.</returns>
+    public TopologicalSort.Result TopologicalSort()
+    {
+        var edges = _executor.GetOutEdges();
+        var nodes = _executor.GetAllNodes();
+        return Algorithms.Connectivity.TopologicalSort.KahnSort(nodes, edges);
+    }
+
+    /// <summary>
+    /// Checks whether the graph contains cycles.
+    /// </summary>
+    /// <returns>True if the graph has at least one cycle.</returns>
+    public bool HasCycles()
+    {
+        var edges = _executor.GetOutEdges();
+        var nodes = _executor.GetAllNodes();
+        return Algorithms.Connectivity.TopologicalSort.KahnSort(nodes, edges).HasCycles;
+    }
+
+    /// <summary>
+    /// Finds all strongly connected components using Tarjan's algorithm.
+    /// </summary>
+    /// <returns>List of SCCs, each represented as a list of node identifiers.</returns>
+    public List<List<string>> FindSCC()
+    {
+        var edges = _executor.GetOutEdges();
+        var nodes = _executor.GetAllNodes();
+        return StronglyConnectedComponents.Find(nodes, edges);
+    }
+
+    /// <summary>
+    /// Finds all weakly connected components using Union-Find.
+    /// </summary>
+    /// <returns>List of WCCs, each represented as a list of node identifiers.</returns>
+    public List<List<string>> FindWCC()
+    {
+        var edges = _executor.GetOutEdges();
+        var nodes = _executor.GetAllNodes();
+        return WeaklyConnectedComponents.Find(nodes, edges);
     }
 }

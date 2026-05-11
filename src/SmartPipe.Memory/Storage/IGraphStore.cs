@@ -113,6 +113,9 @@ public interface IGraphStore : IAsyncDisposable
     /// <summary>Get all outgoing edges keyed by source node id.</summary>
     IReadOnlyDictionary<string, IReadOnlyList<Edge>> GetOutEdges();
 
+    /// <summary>Returns all nodes as a read-only dictionary.</summary>
+    IReadOnlyDictionary<string, Node> GetAllNodes();
+    
     /// <summary>Get weakened edges from a node (weight &lt; 0.3) for decay recalculation.</summary>
     Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default);
 
