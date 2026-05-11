@@ -5,6 +5,8 @@ using System.Threading.Channels;
 using Microsoft.Data.Sqlite;
 using SmartPipe.Memory.Graph;
 using SmartPipe.Memory.Model;
+using SmartPipe.Memory.Algorithms.Classification;
+
 
 namespace SmartPipe.Memory.Storage;
 
@@ -18,10 +20,16 @@ public sealed class SqliteWALStore : IGraphStore
     private readonly SqliteConnection _connection;
     private readonly SemaphoreSlim _asyncLock = new(1, 1);
     private readonly InMemoryGraphStore _memoryStore;
+
     private readonly Channel<MetricsEntry> _metricsChannel;
     private readonly List<Insight> _insights = new();
     private StoreState _state = StoreState.Running;
 
+    /// <summary>
+    /// Create a new SQLite-backed graph store.
+    /// </summary>
+    /// <param name="connectionString">Path to the SQLite database file.</param>
+    /// <param name="metricsCapacity">Capacity of the metrics buffer channel.</param>
     public SqliteWALStore(string connectionString = "memory.db", int metricsCapacity = 10000)
     {
         _connection = new SqliteConnection($"Data Source={connectionString}");
@@ -32,8 +40,22 @@ public sealed class SqliteWALStore : IGraphStore
         });
     }
 
+    /// <inheritdoc />
     public StoreState State => _state;
+
+    /// <inheritdoc />
     public bool IsDraining => _state is StoreState.Draining or StoreState.Drained;
+
+    /// <summary>
+    /// Optional classifier for nodes. Delegates to the in-memory store.
+    /// </summary>
+    public AutoClassifier? Classifier
+    {
+        get => _memoryStore.Classifier;
+        set => _memoryStore.Classifier = value;
+    }
+
+    /// <inheritdoc />
     public ChannelWriter<MetricsEntry> MetricsChannel => _metricsChannel.Writer;
 
     /// <summary>
@@ -53,6 +75,7 @@ public sealed class SqliteWALStore : IGraphStore
 
     // -- Nodes --
 
+    /// <inheritdoc />
     public async Task<Node> UpsertNodeAsync(Node node, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -85,8 +108,8 @@ public sealed class SqliteWALStore : IGraphStore
             cmd.Parameters.AddWithValue("@failureProb", node.FailureProbability);
             cmd.Parameters.AddWithValue("@predictedLatencyMs", node.PredictedLatencyMs);
             cmd.Parameters.AddWithValue("@resourceStrain", node.ResourceStrain);
-            cmd.Parameters.AddWithValue("@validFrom", node.ValidFrom.ToString("O"));
-            cmd.Parameters.AddWithValue("@validTo", node.ValidTo?.ToString("O") ?? (object)DBNull.Value);
+            cmd.Parameters.AddWithValue("@validFrom", node.ValidFrom.ToUniversalTime().ToString("O"));
+            cmd.Parameters.AddWithValue("@validTo", node.ValidTo?.ToUniversalTime().ToString("O") ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("@txTime", DateTime.UtcNow.ToString("O"));
             cmd.Parameters.AddWithValue("@version", node.Version + 1);
 
@@ -100,6 +123,7 @@ public sealed class SqliteWALStore : IGraphStore
         }
     }
 
+    /// <inheritdoc />
     public async Task BatchUpsertNodesAsync(IAsyncEnumerable<Node> nodes, CancellationToken ct = default)
     {
         ThrowIfNotRunning();
@@ -163,9 +187,11 @@ public sealed class SqliteWALStore : IGraphStore
             await _memoryStore.UpsertNodeAsync(node, ct);
     }
 
+    /// <inheritdoc />
     public Task<Node?> GetNodeAsync(string nodeId, CancellationToken ct = default)
         => _memoryStore.GetNodeAsync(nodeId, ct);
 
+    /// <inheritdoc />
     public async Task DeleteNodeAsync(string nodeId, CancellationToken ct = default)
     {
         ThrowIfNotRunning();
@@ -186,6 +212,9 @@ public sealed class SqliteWALStore : IGraphStore
         }
     }
 
+    // -- Edges --
+
+    /// <inheritdoc />
     public async Task<Edge> UpsertEdgeAsync(Edge edge, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(edge);
@@ -225,28 +254,59 @@ public sealed class SqliteWALStore : IGraphStore
         }
     }
 
+    /// <inheritdoc />
     public Task DeleteEdgeAsync(long edgeId, CancellationToken ct = default)
         => _memoryStore.DeleteEdgeAsync(edgeId, ct);
 
     // -- Queries (delegate to in-memory) --
 
+    /// <inheritdoc />
     public IAsyncEnumerable<Node> QueryNodesAsync(MemoryQuery query, CancellationToken ct = default)
         => _memoryStore.QueryNodesAsync(query, ct);
 
+    /// <inheritdoc />
+    public IAsyncEnumerable<Node> QueryNodesAsOfAsync(MemoryQuery query, DateTime asOf, CancellationToken ct = default)
+        => _memoryStore.QueryNodesAsOfAsync(query, asOf, ct);
+
+    /// <inheritdoc />
+    public IAsyncEnumerable<Edge> QueryEdgesAsOfAsync(MemoryQuery query, DateTime asOf, CancellationToken ct = default)
+        => _memoryStore.QueryEdgesAsOfAsync(query, asOf, ct);
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<PathSegment>> FindPathAsync(
-        string fromNodeId, string toNodeId, string edgeType, int maxDepth, CancellationToken ct = default)
-        => _memoryStore.FindPathAsync(fromNodeId, toNodeId, edgeType, maxDepth, ct);
+        string fromNodeId, string toNodeId, string edgeType, int maxDepth,
+        Func<Node, bool>? nodeFilter = null,
+        double? minWeight = null,
+        double? minConfidence = null,
+        CancellationToken ct = default)
+        => _memoryStore.FindPathAsync(fromNodeId, toNodeId, edgeType, maxDepth, nodeFilter, minWeight, minConfidence, ct);
 
+    /// <inheritdoc />
     public IAsyncEnumerable<(Node Node, int Depth)> TraverseAsync(
-        string startNodeId, string edgeType, int maxDepth, int limit, CancellationToken ct = default)
-        => _memoryStore.TraverseAsync(startNodeId, edgeType, maxDepth, limit, ct);
+        string startNodeId, string edgeType, int maxDepth, int limit,
+        Func<Node, bool>? nodeFilter = null,
+        double? minWeight = null,
+        double? minConfidence = null,
+        CancellationToken ct = default)
+        => _memoryStore.TraverseAsync(startNodeId, edgeType, maxDepth, limit, nodeFilter, minWeight, minConfidence, ct);
 
+    /// <inheritdoc />
     public IAsyncEnumerable<Edge> QueryInsightsAsync(MemoryQuery query, CancellationToken ct = default)
         => _memoryStore.QueryInsightsAsync(query, ct);
 
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Cluster>> ClusterAsync(CancellationToken ct = default)
+        => _memoryStore.ClusterAsync(ct);
+    
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, IReadOnlyList<Edge>> GetOutEdges()
+    => _memoryStore.GetOutEdges();
+
+    /// <inheritdoc />
     public Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default)
         => _memoryStore.GetWeakenedEdgesFromAsync(nodeId, ct);
 
+    /// <inheritdoc />
     public Task InsertInsightAsync(Insight insight, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(insight);
@@ -254,6 +314,7 @@ public sealed class SqliteWALStore : IGraphStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task UpdateNodeHealthAsync(
         string nodeId, double healthScore, double failureProb,
         double predictedLatencyMs, double resourceStrain, int expectedVersion, CancellationToken ct = default)
@@ -262,6 +323,7 @@ public sealed class SqliteWALStore : IGraphStore
 
     // -- Lifecycle --
 
+    /// <inheritdoc />
     public Task DrainAsync(CancellationToken ct = default)
     {
         _state = StoreState.Draining;
@@ -270,11 +332,22 @@ public sealed class SqliteWALStore : IGraphStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
-    {
+{
+        // Flush WAL to main database and truncate the wal file
+        using (var cmd = _connection.CreateCommand())
+        {
+            cmd.CommandText = "PRAGMA wal_checkpoint(TRUNCATE)";
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        SqliteConnection.ClearPool(_connection);
+        SqliteConnection.ClearAllPools();
         await _connection.CloseAsync();
         await _connection.DisposeAsync();
         _asyncLock.Dispose();
+        await _memoryStore.DisposeAsync();
     }
 
     // -- Private helpers --
@@ -312,14 +385,14 @@ public sealed class SqliteWALStore : IGraphStore
             Id = reader.GetString(0),
             Type = reader.GetString(1),
             Label = reader.GetString(2),
-            Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetString(3)) ?? new(),
+            Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(reader.GetString(3)) ?? [],
             HealthScore = reader.GetDouble(4),
             FailureProbability = reader.GetDouble(5),
             PredictedLatencyMs = reader.GetDouble(6),
             ResourceStrain = reader.GetDouble(7),
-            ValidFrom = DateTime.Parse(reader.GetString(8)),
-            ValidTo = reader.IsDBNull(9) ? null : DateTime.Parse(reader.GetString(9)),
-            TxTime = DateTime.Parse(reader.GetString(10)),
+            ValidFrom = DateTimeOffset.Parse(reader.GetString(8)).UtcDateTime,
+            ValidTo = reader.IsDBNull(9) ? null : DateTimeOffset.Parse(reader.GetString(9)).UtcDateTime,
+            TxTime = DateTimeOffset.Parse(reader.GetString(10)).UtcDateTime,
             Version = reader.GetInt32(11)
         };
     }
@@ -334,10 +407,10 @@ public sealed class SqliteWALStore : IGraphStore
             Type = Enum.Parse<EdgeType>(reader.GetString(3)),
             Weight = reader.GetDouble(4),
             Confidence = reader.GetDouble(5),
-            Steps = JsonSerializer.Deserialize<List<TransformationStep>>(reader.GetString(6)) ?? new(),
-            ValidFrom = DateTime.Parse(reader.GetString(7)),
-            ValidTo = reader.IsDBNull(8) ? null : DateTime.Parse(reader.GetString(8)),
-            TxTime = DateTime.Parse(reader.GetString(9))
+            Steps = JsonSerializer.Deserialize<List<TransformationStep>>(reader.GetString(6)) ?? [],
+            ValidFrom = DateTimeOffset.Parse(reader.GetString(7)).UtcDateTime,
+            ValidTo = reader.IsDBNull(8) ? null : DateTimeOffset.Parse(reader.GetString(8)).UtcDateTime,
+            TxTime = DateTimeOffset.Parse(reader.GetString(9)).UtcDateTime,
         };
     }
 

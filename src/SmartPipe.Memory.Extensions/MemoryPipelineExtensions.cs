@@ -1,6 +1,9 @@
 using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using SmartPipe.Core;
 using SmartPipe.Memory.Graph;
+using SmartPipe.Memory.Health.Analysis;
+using SmartPipe.Memory.Health.Infrastructure;
 using SmartPipe.Memory.Query;
 using SmartPipe.Memory.Storage;
 
@@ -13,7 +16,8 @@ public static class MemoryPipelineExtensions
 {
     /// <summary>
     /// Connect a SmartPipe.Memory graph store to a pipeline.
-    /// Automatically registers pipeline topology and streams metrics.
+    /// Automatically registers pipeline topology, streams metrics,
+    /// and starts the metrics background consumer for health analysis.
     /// </summary>
     /// <typeparam name="TInput">Pipeline input type.</typeparam>
     /// <typeparam name="TOutput">Pipeline output type.</typeparam>
@@ -27,6 +31,16 @@ public static class MemoryPipelineExtensions
         ArgumentNullException.ThrowIfNull(pipeline);
         ArgumentNullException.ThrowIfNull(store);
 
+        // Start metrics background consumer
+        var metricsChannel = Channel.CreateBounded<MetricsEntry>(new BoundedChannelOptions(10000)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest
+        });
+
+        var calculator = new HealthVectorCalculator(store);
+        var consumer = new MetricsBackgroundConsumer(metricsChannel.Reader, store, calculator);
+        consumer.StartAsync();
+
         // Register pipeline topology when running starts
         pipeline.OnStateChanged += async (oldState, newState) =>
         {
@@ -38,23 +52,33 @@ public static class MemoryPipelineExtensions
 
         // Stream metrics to the store
         pipeline.Options.OnMetrics = metrics =>
-    {
-        var entry = new MetricsEntry
         {
-            NodeId = "pipeline",
-            Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double>
+            var entry = new MetricsEntry
             {
-                ["ItemsProcessed"] = metrics.ItemsProcessed,
-                ["ItemsFailed"] = metrics.ItemsFailed,
-                ["AvgLatencyMs"] = metrics.AvgLatencyMs,
-                ["SmoothThroughput"] = metrics.SmoothThroughput
-            }
+                NodeId = "pipeline",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double>
+                {
+                    ["ItemsProcessed"] = metrics.ItemsProcessed,
+                    ["ItemsFailed"] = metrics.ItemsFailed,
+                    ["AvgLatencyMs"] = metrics.AvgLatencyMs,
+                    ["SmoothThroughput"] = metrics.SmoothThroughput
+                }
+            };
+
+            metricsChannel.Writer.TryWrite(entry);
+            store.MetricsChannel.TryWrite(entry);
         };
 
-        // Fire-and-forget  (no await)
-        store.MetricsChannel.TryWrite(entry);
-    };
+        // Stop consumer when pipeline stops
+        pipeline.OnStateChanged += (oldState, newState) =>
+        {
+            if (newState is PipelineState.Completed or PipelineState.Faulted or PipelineState.Cancelled)
+            {
+                metricsChannel.Writer.Complete();
+                consumer.StopAsync();
+            }
+        };
 
         return pipeline;
     }
@@ -133,21 +157,21 @@ public static class MemoryPipelineExtensions
         public Task InitializeAsync(CancellationToken ct) => Task.CompletedTask;
 
         public async IAsyncEnumerable<ProcessingContext<Node>> ReadAsync(
-        [EnumeratorCancellation] CancellationToken ct)
-    {
-        var query = new Model.MemoryQuery
+            [EnumeratorCancellation] CancellationToken ct)
         {
-            NodeType = _nodeType,
-            Type = Model.QueryType.FindNodes
-        };
+            var query = new Model.MemoryQuery
+            {
+                NodeType = _nodeType,
+                Type = Model.QueryType.FindNodes
+            };
 
-        await foreach (var node in _store.QueryNodesAsync(query, ct))
-        {
-            yield return new ProcessingContext<Node>(node);
+            await foreach (var node in _store.QueryNodesAsync(query, ct))
+            {
+                yield return new ProcessingContext<Node>(node);
+            }
         }
-    }
 
-    public Task DisposeAsync() => Task.CompletedTask;
+        public Task DisposeAsync() => Task.CompletedTask;
     }
 
     private sealed class GraphSink<T> : ISink<T>

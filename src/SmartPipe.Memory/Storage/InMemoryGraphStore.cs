@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Channels;
 using SmartPipe.Memory.Graph;
 using SmartPipe.Memory.Model;
+using SmartPipe.Memory.Algorithms.Classification;
 
 namespace SmartPipe.Memory.Storage;
 
@@ -21,6 +22,10 @@ public sealed class InMemoryGraphStore : IGraphStore
     private StoreState _state = StoreState.Running;
     private long _nextEdgeId = 1;
 
+    /// <summary>
+    /// Create a new in-memory graph store.
+    /// </summary>
+    /// <param name="metricsCapacity">Capacity of the metrics buffer channel.</param>
     public InMemoryGraphStore(int metricsCapacity = 10000)
     {
         _metricsChannel = Channel.CreateBounded<MetricsEntry>(new BoundedChannelOptions(metricsCapacity)
@@ -29,12 +34,18 @@ public sealed class InMemoryGraphStore : IGraphStore
         });
     }
 
+    /// <inheritdoc />
     public StoreState State => _state;
+
+    /// <inheritdoc />
     public bool IsDraining => _state is StoreState.Draining or StoreState.Drained;
+
+    /// <inheritdoc />
     public ChannelWriter<MetricsEntry> MetricsChannel => _metricsChannel.Writer;
 
     // -- Nodes --
 
+    /// <inheritdoc />
     public Task<Node> UpsertNodeAsync(Node node, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -43,10 +54,16 @@ public sealed class InMemoryGraphStore : IGraphStore
         _lock.EnterWriteLock();
         try
         {
+            var effectiveType = node.Type;
+            if (Classifier is not null && string.IsNullOrEmpty(effectiveType))
+            {
+                effectiveType = Classifier.Classify(node);
+            }
+
             var updated = new Node
             {
                 Id = node.Id,
-                Type = node.Type,
+                Type = effectiveType,
                 Label = node.Label,
                 Properties = node.Properties,
                 Metadata = node.Metadata,
@@ -55,8 +72,8 @@ public sealed class InMemoryGraphStore : IGraphStore
                 FailureProbability = node.FailureProbability,
                 PredictedLatencyMs = node.PredictedLatencyMs,
                 ResourceStrain = node.ResourceStrain,
-                ValidFrom = node.ValidFrom,
-                ValidTo = node.ValidTo,
+                ValidFrom = node.ValidFrom.ToUniversalTime(),
+                ValidTo = node.ValidTo?.ToUniversalTime(),
                 Version = node.Version + 1
             };
 
@@ -69,10 +86,10 @@ public sealed class InMemoryGraphStore : IGraphStore
         }
     }
 
+    /// <inheritdoc />
     public Task BatchUpsertNodesAsync(IAsyncEnumerable<Node> nodes, CancellationToken ct = default)
     {
         ThrowIfNotRunning();
-
         return Task.Run(async () =>
         {
             await foreach (var node in nodes.WithCancellation(ct))
@@ -80,16 +97,17 @@ public sealed class InMemoryGraphStore : IGraphStore
         }, ct);
     }
 
+    /// <inheritdoc />
     public Task<Node?> GetNodeAsync(string nodeId, CancellationToken ct = default)
     {
         _nodes.TryGetValue(nodeId, out var node);
         return Task.FromResult(node);
     }
 
+    /// <inheritdoc />
     public Task DeleteNodeAsync(string nodeId, CancellationToken ct = default)
     {
         ThrowIfNotRunning();
-
         _lock.EnterWriteLock();
         try
         {
@@ -100,12 +118,12 @@ public sealed class InMemoryGraphStore : IGraphStore
         {
             _lock.ExitWriteLock();
         }
-
         return Task.CompletedTask;
     }
 
     // -- Edges --
 
+    /// <inheritdoc />
     public Task<Edge> UpsertEdgeAsync(Edge edge, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(edge);
@@ -144,10 +162,10 @@ public sealed class InMemoryGraphStore : IGraphStore
         }
     }
 
+    /// <inheritdoc />
     public Task DeleteEdgeAsync(long edgeId, CancellationToken ct = default)
     {
         ThrowIfNotRunning();
-
         _lock.EnterWriteLock();
         try
         {
@@ -158,12 +176,12 @@ public sealed class InMemoryGraphStore : IGraphStore
         {
             _lock.ExitWriteLock();
         }
-
         return Task.CompletedTask;
     }
 
     // -- Queries --
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<Node> QueryNodesAsync(
         MemoryQuery query,
         [EnumeratorCancellation] CancellationToken ct = default)
@@ -173,8 +191,12 @@ public sealed class InMemoryGraphStore : IGraphStore
         if (query.NodeType is not null)
             result = result.Where(n => n.Type == query.NodeType);
 
-        if (query.Filter is FilterNode.PropertyFilter pf)
-            result = ApplyPropertyFilter(result, pf);
+        if (query.Filter is not null)
+            result = ApplyFilter(result, query.Filter);
+
+        // Time-travel filter
+        if (query.AsOf.HasValue)
+            result = result.Where(n => n.ValidFrom <= query.AsOf.Value && (n.ValidTo == null || n.ValidTo >= query.AsOf.Value));
 
         if (query.OrderBy is not null)
             result = ApplyOrdering(result, query.OrderBy, query.OrderDesc);
@@ -191,50 +213,34 @@ public sealed class InMemoryGraphStore : IGraphStore
         await Task.CompletedTask;
     }
 
-    public Task<IReadOnlyList<PathSegment>> FindPathAsync(
-        string fromNodeId,
-        string toNodeId,
-        string edgeType,
-        int maxDepth,
-        CancellationToken ct = default)
-    {
-        var segments = BreadthFirstSearch(fromNodeId, toNodeId, edgeType, maxDepth, ct);
-        return Task.FromResult<IReadOnlyList<PathSegment>>(segments);
-    }
-
-    public async IAsyncEnumerable<(Node Node, int Depth)> TraverseAsync(
-        string startNodeId,
-        string edgeType,
-        int maxDepth,
-        int limit,
+    /// <inheritdoc />
+    public async IAsyncEnumerable<Node> QueryNodesAsOfAsync(
+        MemoryQuery query,
+        DateTime asOf,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var visited = new HashSet<string>();
-        var queue = new Queue<(string NodeId, int Depth)>();
-        queue.Enqueue((startNodeId, 0));
-        visited.Add(startNodeId);
+        var asOfQuery = query with { AsOf = asOf };
+        await foreach (var node in QueryNodesAsync(asOfQuery, ct))
+            yield return node;
+    }
 
-        var count = 0;
-        while (queue.Count > 0 && count < limit)
+    /// <inheritdoc />
+    public async IAsyncEnumerable<Edge> QueryEdgesAsOfAsync(
+        MemoryQuery query,
+        DateTime asOf,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        foreach (var (_, edges) in _outEdges)
         {
-            ct.ThrowIfCancellationRequested();
-
-            var (currentId, depth) = queue.Dequeue();
-
-            if (_nodes.TryGetValue(currentId, out var node))
+            foreach (var edge in edges)
             {
-                yield return (node, depth);
-                count++;
-            }
+                ct.ThrowIfCancellationRequested();
 
-            if (depth >= maxDepth) continue;
-
-            if (_outEdges.TryGetValue(currentId, out var edges))
-            {
-                foreach (var edge in edges.Where(e => e.Type.ToString() == edgeType))
+                if (edge.ValidFrom <= asOf && (edge.ValidTo == null || edge.ValidTo > asOf))
                 {
-                    if (visited.Add(edge.ToNodeId))
-                        queue.Enqueue((edge.ToNodeId, depth + 1));
+                    // Apply edge type filter from query
+                    if (query.EdgeType is null || edge.Type.ToString() == query.EdgeType)
+                        yield return edge;
                 }
             }
         }
@@ -242,17 +248,91 @@ public sealed class InMemoryGraphStore : IGraphStore
         await Task.CompletedTask;
     }
 
+    /// <inheritdoc />
+    public Task<IReadOnlyList<PathSegment>> FindPathAsync(
+        string fromNodeId,
+        string toNodeId,
+        string edgeType,
+        int maxDepth,
+        Func<Node, bool>? nodeFilter = null,
+        double? minWeight = null,
+        double? minConfidence = null,
+        CancellationToken ct = default)
+    {
+        var result = GraphTraversalEngine.FindPath(
+            _nodes, _outEdges, fromNodeId, toNodeId, edgeType, maxDepth,
+            nodeFilter, minWeight, minConfidence, ct);
+
+        return Task.FromResult(result);
+    }
+
+    /// <inheritdoc />
+    public async IAsyncEnumerable<(Node Node, int Depth)> TraverseAsync(
+        string startNodeId,
+        string edgeType,
+        int maxDepth,
+        int limit,
+        Func<Node, bool>? nodeFilter = null,
+        double? minWeight = null,
+        double? minConfidence = null,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        await foreach (var (node, depth) in GraphTraversalEngine.Traverse(
+            _nodes, _outEdges, startNodeId, edgeType, maxDepth, limit,
+            nodeFilter, minWeight, minConfidence, ct))
+        {
+            yield return (node, depth);
+        }
+    }
+
+    /// <inheritdoc />
     public async IAsyncEnumerable<Edge> QueryInsightsAsync(
         MemoryQuery query,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
+    // Return stored insights as Edge objects for compatibility
+        foreach (var insight in _insights)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (query.NodeType is not null && insight.Type != query.NodeType)
+                continue;
+
+            if (query.Limit.HasValue && query.Limit.Value <= 0)
+                break;
+
+            yield return new Edge
+            {
+                Id = 0,
+                FromNodeId = insight.RelatedNodeIds.FirstOrDefault() ?? string.Empty,
+                ToNodeId = insight.Id,
+                Type = EdgeType.FeedsInto,
+                Weight = insight.Confidence,
+                Confidence = insight.Confidence
+            };
+        }
+
         await Task.CompletedTask;
-        yield break;
     }
 
-    public Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(
-        string nodeId,
-        CancellationToken ct = default)
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Cluster>> ClusterAsync(CancellationToken ct = default)
+    {
+        var leiden = new Algorithms.Clustering.LeidenClusterer();
+        return leiden.Cluster(
+            new Dictionary<string, Node>(_nodes),
+            _outEdges.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Edge>)kvp.Value),
+            ct: ct);
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, IReadOnlyList<Edge>> GetOutEdges()
+    {
+        return _outEdges.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Edge>)kvp.Value);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default)
     {
         if (_outEdges.TryGetValue(nodeId, out var edges))
             return Task.FromResult<IReadOnlyList<Edge>>(edges.Where(e => e.Weight < 0.3).ToList());
@@ -260,6 +340,7 @@ public sealed class InMemoryGraphStore : IGraphStore
         return Task.FromResult<IReadOnlyList<Edge>>(Array.Empty<Edge>());
     }
 
+    /// <inheritdoc />
     public Task InsertInsightAsync(Insight insight, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(insight);
@@ -267,6 +348,7 @@ public sealed class InMemoryGraphStore : IGraphStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task UpdateNodeHealthAsync(
         string nodeId,
         double healthScore,
@@ -291,6 +373,7 @@ public sealed class InMemoryGraphStore : IGraphStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task DrainAsync(CancellationToken ct = default)
     {
         _state = StoreState.Draining;
@@ -299,11 +382,18 @@ public sealed class InMemoryGraphStore : IGraphStore
         return Task.CompletedTask;
     }
 
+    /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
         _lock.Dispose();
         return ValueTask.CompletedTask;
     }
+
+    /// <summary>
+    /// Optional classifier for nodes. When set and node Type is empty,
+    /// the classifier will attempt to determine the type from Properties.
+    /// </summary>
+    public AutoClassifier? Classifier { get; set; }
 
     // -- Private helpers --
 
@@ -314,6 +404,32 @@ public sealed class InMemoryGraphStore : IGraphStore
             FilterOperator.LessThan => nodes.Where(n => GetProperty(n, filter.Property) < filter.Value),
             FilterOperator.GreaterThan => nodes.Where(n => GetProperty(n, filter.Property) > filter.Value),
             FilterOperator.Equals => nodes.Where(n => Math.Abs(GetProperty(n, filter.Property) - filter.Value) < 0.001),
+            _ => nodes
+        };
+    }
+
+    private static IEnumerable<Node> ApplyAndFilter(IEnumerable<Node> nodes, FilterNode.And filter)
+    {
+        var leftIds = new HashSet<string>(ApplyFilter(nodes, filter.Left).Select(n => n.Id));
+        return ApplyFilter(nodes, filter.Right).Where(n => leftIds.Contains(n.Id));
+    }
+
+    private static IEnumerable<Node> ApplyOrFilter(IEnumerable<Node> nodes, FilterNode.Or filter)
+    {
+        var leftResult = ApplyFilter(nodes, filter.Left);
+        var rightResult = ApplyFilter(nodes, filter.Right);
+        var allIds = new HashSet<string>(leftResult.Select(n => n.Id));
+        allIds.UnionWith(rightResult.Select(n => n.Id));
+        return nodes.Where(n => allIds.Contains(n.Id));
+    }
+
+    private static IEnumerable<Node> ApplyFilter(IEnumerable<Node> nodes, FilterNode filter)
+    {
+        return filter switch
+        {
+            FilterNode.PropertyFilter pf => ApplyPropertyFilter(nodes, pf),
+            FilterNode.And and => ApplyAndFilter(nodes, and),
+            FilterNode.Or or => ApplyOrFilter(nodes, or),
             _ => nodes
         };
     }
@@ -336,67 +452,7 @@ public sealed class InMemoryGraphStore : IGraphStore
             _ => nodes.OrderBy(n => n.HealthScore)
         };
 
-        return descending ? ordered.OrderByDescending(_ => 0) : ordered;
-    }
-
-    private List<PathSegment> BreadthFirstSearch(
-        string fromNodeId,
-        string toNodeId,
-        string edgeType,
-        int maxDepth,
-        CancellationToken ct)
-    {
-        var parent = new Dictionary<string, (string NodeId, string EdgeType, double Weight)>();
-        var queue = new Queue<(string NodeId, int Depth)>();
-        var visited = new HashSet<string>();
-
-        queue.Enqueue((fromNodeId, 0));
-        visited.Add(fromNodeId);
-
-        while (queue.Count > 0)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var (currentId, depth) = queue.Dequeue();
-
-            if (currentId == toNodeId)
-                return ReconstructPath(parent, fromNodeId, toNodeId);
-
-            if (depth >= maxDepth) continue;
-
-            if (_outEdges.TryGetValue(currentId, out var edges))
-            {
-                foreach (var edge in edges.Where(e => e.Type.ToString() == edgeType))
-                {
-                    if (visited.Add(edge.ToNodeId))
-                    {
-                        parent[edge.ToNodeId] = (currentId, edge.Type.ToString(), edge.Weight);
-                        queue.Enqueue((edge.ToNodeId, depth + 1));
-                    }
-                }
-            }
-        }
-
-        return new List<PathSegment>();
-    }
-
-    private static List<PathSegment> ReconstructPath(
-        Dictionary<string, (string NodeId, string EdgeType, double Weight)> parent,
-        string fromNodeId,
-        string toNodeId)
-    {
-        var path = new List<PathSegment>();
-        var current = toNodeId;
-
-        while (current != fromNodeId && parent.TryGetValue(current, out var p))
-        {
-            path.Add(new PathSegment { NodeId = current, EdgeType = p.EdgeType, Weight = p.Weight });
-            current = p.NodeId;
-        }
-
-        path.Add(new PathSegment { NodeId = fromNodeId, EdgeType = string.Empty, Weight = 0.0 });
-        path.Reverse();
-        return path;
+        return descending ? ordered.ThenByDescending(_ => 0) : ordered;
     }
 
     private void ThrowIfNotRunning()

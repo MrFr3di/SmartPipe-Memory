@@ -1,8 +1,10 @@
+using SmartPipe.Memory.Graph;
+
 namespace SmartPipe.Memory.Model;
 
 /// <summary>
 /// Immutable graph query object.
-/// Supports structural search, pathfinding, traversal, and insight retrieval.
+/// Supports structural search, pathfinding, traversal, time-travel queries, and insight retrieval.
 /// </summary>
 public sealed record MemoryQuery
 {
@@ -35,6 +37,44 @@ public sealed record MemoryQuery
 
     /// <summary>Type of query to execute.</summary>
     public QueryType Type { get; init; }
+
+
+    /// <summary>
+    /// Time-travel: return the graph state as it was at this point in time.
+    /// Filters nodes and edges by <c>ValidFrom &lt;= AsOf AND (ValidTo IS NULL OR ValidTo &gt; AsOf)</c>.
+    /// </summary>
+    public DateTime? AsOf { get; init; }
+
+    /// <summary>
+    /// Time-travel: return changes in this time range.
+    /// Filters nodes and edges by <c>ValidFrom BETWEEN ValidFrom AND ValidTo</c>.
+    /// </summary>
+    public DateTime? TimeRangeFrom { get; init; }
+
+    /// <summary>
+    /// Time-travel: return changes in this time range.
+    /// Filters nodes and edges by <c>ValidTo BETWEEN ValidFrom AND ValidTo</c>.
+    /// </summary>
+    public DateTime? TimeRangeTo { get; init; }
+
+    /// <summary>
+    /// Minimum edge weight for pathfinding and traversal.
+    /// Edges with weight below this threshold are skipped.
+    /// </summary>
+    public double? MinWeight { get; init; }
+
+    /// <summary>
+    /// Minimum edge confidence for pathfinding and traversal.
+    /// Edges with confidence below this threshold are skipped.
+    /// </summary>
+    public double? MinConfidence { get; init; }
+
+    /// <summary>
+    /// Optional node filter applied during graph traversal (BFS, Dijkstra).
+    /// Nodes that return <c>false</c> are skipped and not visited.
+    /// Use with caution: complex predicates may slow down traversal.
+    /// </summary>
+    public Func<Node, bool>? NodeFilter { get; init; }
 }
 
 /// <summary>

@@ -1,4 +1,5 @@
 using SmartPipe.Memory.Graph;
+using SmartPipe.Memory.Model;
 using SmartPipe.Memory.Storage;
 
 namespace SmartPipe.Memory.Tests.Stress;
@@ -50,7 +51,7 @@ public sealed class ConcurrentAccessTests : IAsyncDisposable
 
         var readTask = Task.Run(async () =>
         {
-            var query = new Model.MemoryQuery { NodeType = "File", Type = Model.QueryType.FindNodes };
+            var query = new MemoryQuery { NodeType = "File", Type = QueryType.FindNodes };
             var count = 0;
             await foreach (var _ in _store.QueryNodesAsync(query))
                 count++;

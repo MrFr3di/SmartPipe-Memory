@@ -5,8 +5,9 @@ namespace SmartPipe.Memory.Storage;
 
 /// <summary>
 /// Core contract for graph storage.
-/// Supports CRUD operations, queries, pathfinding, and traversal.
-/// Implementations: InMemoryGraphStore, SqliteWALStore.
+/// Supports CRUD operations, queries, pathfinding, traversal,
+/// time-travel queries, and node-filtered traversals.
+/// Implementations: InMemoryGraphStore, SqliteWALStore, DiskBackedGraphStore (v0.1.1).
 /// </summary>
 public interface IGraphStore : IAsyncDisposable
 {
@@ -53,24 +54,64 @@ public interface IGraphStore : IAsyncDisposable
     /// <summary>Stream nodes matching the query.</summary>
     IAsyncEnumerable<Node> QueryNodesAsync(MemoryQuery query, CancellationToken ct = default);
 
+    /// <summary>
+    /// Stream nodes as they existed at a specific point in time.
+    /// Filters by <c>ValidFrom &lt;= asOf AND (ValidTo IS NULL OR ValidTo &gt; asOf)</c>.
+    /// </summary>
+    IAsyncEnumerable<Node> QueryNodesAsOfAsync(MemoryQuery query, DateTime asOf, CancellationToken ct = default);
+
+    /// <summary>
+    /// Stream edges as they existed at a specific point in time.
+    /// Filters by <c>ValidFrom &lt;= asOf AND (ValidTo IS NULL OR ValidTo &gt; asOf)</c>.
+    /// </summary>
+    IAsyncEnumerable<Edge> QueryEdgesAsOfAsync(MemoryQuery query, DateTime asOf, CancellationToken ct = default);
+
     /// <summary>Find shortest path between two nodes.</summary>
+    /// <param name="fromNodeId">Start node identifier.</param>
+    /// <param name="toNodeId">Target node identifier.</param>
+    /// <param name="edgeType">Edge type to traverse.</param>
+    /// <param name="maxDepth">Maximum search depth.</param>
+    /// <param name="nodeFilter">Optional filter applied to each visited node. Nodes returning false are skipped.</param>
+    /// <param name="minWeight">Optional minimum edge weight. Edges below this threshold are skipped.</param>
+    /// <param name="minConfidence">Optional minimum edge confidence. Edges below this threshold are skipped.</param>
+    /// <param name="ct">Cancellation token.</param>
     Task<IReadOnlyList<PathSegment>> FindPathAsync(
         string fromNodeId,
         string toNodeId,
         string edgeType,
         int maxDepth,
+        Func<Node, bool>? nodeFilter = null,
+        double? minWeight = null,
+        double? minConfidence = null,
         CancellationToken ct = default);
 
     /// <summary>Traverse graph from a starting node.</summary>
+    /// <param name="startNodeId">Start node identifier.</param>
+    /// <param name="edgeType">Edge type to traverse.</param>
+    /// <param name="maxDepth">Maximum traversal depth.</param>
+    /// <param name="limit">Maximum number of nodes to visit.</param>
+    /// <param name="nodeFilter">Optional filter applied to each visited node. Nodes returning false are skipped.</param>
+    /// <param name="minWeight">Optional minimum edge weight. Edges below this threshold are skipped.</param>
+    /// <param name="minConfidence">Optional minimum edge confidence. Edges below this threshold are skipped.</param>
+    /// <param name="ct">Cancellation token.</param>
     IAsyncEnumerable<(Node Node, int Depth)> TraverseAsync(
         string startNodeId,
         string edgeType,
         int maxDepth,
         int limit,
+        Func<Node, bool>? nodeFilter = null,
+        double? minWeight = null,
+        double? minConfidence = null,
         CancellationToken ct = default);
 
-    /// <summary>Query insights (placeholder for v0.2.0).</summary>
+    /// <summary>Query insights.</summary>
     IAsyncEnumerable<Edge> QueryInsightsAsync(MemoryQuery query, CancellationToken ct = default);
+
+    /// <summary>Run Leiden clustering and return discovered clusters.</summary>
+    Task<IReadOnlyList<Cluster>> ClusterAsync(CancellationToken ct = default);
+
+    /// <summary>Get all outgoing edges keyed by source node id.</summary>
+    IReadOnlyDictionary<string, IReadOnlyList<Edge>> GetOutEdges();
 
     /// <summary>Get weakened edges from a node (weight &lt; 0.3) for decay recalculation.</summary>
     Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default);
@@ -97,9 +138,16 @@ public interface IGraphStore : IAsyncDisposable
 /// </summary>
 public enum StoreState
 {
+    /// <summary>Normal operation.</summary>
     Running,
+
+    /// <summary>Shutting down, rejecting new writes.</summary>
     Draining,
+
+    /// <summary>Shutdown complete, read-only.</summary>
     Drained,
+
+    /// <summary>Error state.</summary>
     Faulted
 }
 
@@ -108,8 +156,13 @@ public enum StoreState
 /// </summary>
 public readonly record struct PathSegment
 {
+    /// <summary>Node identifier.</summary>
     public string NodeId { get; init; }
+
+    /// <summary>Edge type traversed to reach this node.</summary>
     public string EdgeType { get; init; }
+
+    /// <summary>Weight of the edge traversed.</summary>
     public double Weight { get; init; }
 }
 
@@ -118,7 +171,12 @@ public readonly record struct PathSegment
 /// </summary>
 public readonly record struct MetricsEntry
 {
+    /// <summary>Node identifier these metrics belong to.</summary>
     public string NodeId { get; init; }
+
+    /// <summary>When the metrics were recorded.</summary>
     public DateTime Timestamp { get; init; }
+
+    /// <summary>Metric name to value map.</summary>
     public IReadOnlyDictionary<string, double> Values { get; init; }
 }

@@ -1,13 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\SmartPipe.Memory\SmartPipe.Memory.csproj" />
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>0.1.1</Version>
+    <Authors>SmartPipe</Authors>
+    <Description>
+      Integration library connecting SmartPipe.Memory with SmartPipe.Core ETL pipelines.
+      Provides UseMemory(), AsGraphSource(), ToGraphSink(), TransformToEdges() and
+      automatic pipeline topology registration.
+    </Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>
+      etl;pipeline;integration;memory;graph;extension;source;sink;transformer;channels
+    </PackageTags>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SmartPipe.Memory\SmartPipe.Memory.csproj" />
+    <PackageReference Include="SmartPipe.Core" Version="1.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SmartPipe.Memory.Health\SmartPipe.Memory.Health.csproj" />
+  </ItemGroup>
 </Project>

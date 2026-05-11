@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SmartPipe.Memory.Algorithms.Classification;
 using SmartPipe.Memory.Caching;
 using SmartPipe.Memory.Diagnostics;
 using SmartPipe.Memory.Query;
@@ -32,15 +33,26 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGraphStore>(_ =>
         {
             var store = StoreFactory.CreateInMemory(config.MetricsBufferCapacity);
+            if (config.EnableAutoClassification && store is InMemoryGraphStore memoryStore)
+            {
+                memoryStore.Classifier = new AutoClassifier();
+            }
             return store;
         });
 
         // Cache
-        services.AddSingleton<NodeCache>(_ => new NodeCache(config.MaxCacheSize));
+        services.AddSingleton(_ => new NodeCache(config.MaxCacheSize));
 
         // Query engine
-        services.AddSingleton<MemoryQueryExecutor>();
-        services.AddSingleton<MemoryQueryBuilder>(sp =>
+        services.AddSingleton(sp =>
+        {
+            var store = sp.GetRequiredService<IGraphStore>();
+            var cache = sp.GetRequiredService<NodeCache>();
+            var metrics = sp.GetService<MemoryMetrics>();
+            return new MemoryQueryExecutor(store, cache, metrics);
+        });
+
+        services.AddSingleton(sp =>
         {
             var executor = sp.GetRequiredService<MemoryQueryExecutor>();
             return new MemoryQueryBuilder(executor);
@@ -76,17 +88,27 @@ public static class ServiceCollectionExtensions
             var store = StoreFactory.CreateSqlite(
                 config.ConnectionString,
                 config.MetricsBufferCapacity);
-
+            if (config.EnableAutoClassification && store is SqliteWALStore sqliteStore)
+            {
+                sqliteStore.Classifier = new AutoClassifier();
+            }
             store.InitializeAsync().GetAwaiter().GetResult();
             return store;
         });
 
         // Cache
-        services.AddSingleton<NodeCache>(_ => new NodeCache(config.MaxCacheSize));
+        services.AddSingleton(_ => new NodeCache(config.MaxCacheSize));
 
         // Query engine
-        services.AddSingleton<MemoryQueryExecutor>();
-        services.AddSingleton<MemoryQueryBuilder>(sp =>
+        services.AddSingleton(sp =>
+        {
+            var store = sp.GetRequiredService<IGraphStore>();
+            var cache = sp.GetRequiredService<NodeCache>();
+            var metrics = sp.GetService<MemoryMetrics>();
+            return new MemoryQueryExecutor(store, cache, metrics);
+        });
+
+        services.AddSingleton(sp =>
         {
             var executor = sp.GetRequiredService<MemoryQueryExecutor>();
             return new MemoryQueryBuilder(executor);
@@ -119,4 +141,11 @@ public sealed class MemoryConfiguration
     /// Capacity of the metrics buffer channel. Default: 10000.
     /// </summary>
     public int MetricsBufferCapacity { get; set; } = 10000;
+
+    /// <summary>
+    /// Enable automatic classification of nodes on upsert.
+    /// When true, nodes with empty Type will be classified using AutoClassifier.
+    /// Default: false.
+    /// </summary>
+    public bool EnableAutoClassification { get; set; }
 }

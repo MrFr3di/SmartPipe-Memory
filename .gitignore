@@ -8,3 +8,10 @@ obj/
 artifacts/
 BenchmarkDotNet.Artifacts/
 packages/
+
+sandbox/
+sandbox_log.txt
+
+.codesight
+coverage_raw/
+coverage/

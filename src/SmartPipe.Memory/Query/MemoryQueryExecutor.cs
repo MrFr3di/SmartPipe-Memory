@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using SmartPipe.Memory.Diagnostics;
 using SmartPipe.Memory.Graph;
 using SmartPipe.Memory.Model;
 using SmartPipe.Memory.Storage;
@@ -8,26 +10,39 @@ namespace SmartPipe.Memory.Query;
 /// <summary>
 /// Executes graph queries against the configured store.
 /// Checks cache first, then delegates to the appropriate strategy.
+/// Emits metrics and tracing spans for observability.
 /// </summary>
 public sealed class MemoryQueryExecutor
 {
     private readonly IGraphStore _store;
     private readonly Caching.NodeCache _cache;
+    private readonly MemoryMetrics? _metrics;
 
-    public MemoryQueryExecutor(IGraphStore store, Caching.NodeCache cache)
+    /// <summary>
+    /// Create a new query executor.
+    /// </summary>
+    /// <param name="store">The graph store to query.</param>
+    /// <param name="cache">Node cache for faster lookups.</param>
+    /// <param name="metrics">Optional metrics collector.</param>
+    public MemoryQueryExecutor(IGraphStore store, Caching.NodeCache cache, MemoryMetrics? metrics = null)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _metrics = metrics;
     }
 
     /// <summary>
     /// Execute a query and stream results.
     /// </summary>
+    /// <param name="query">The query to execute.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Async stream of query results.</returns>
     public async IAsyncEnumerable<QueryResult> ExecuteAsync(
         MemoryQuery query,
         [EnumeratorCancellation] CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(query);
+        _metrics?.RecordQuery();
 
         switch (query.Type)
         {
@@ -60,10 +75,22 @@ public sealed class MemoryQueryExecutor
         MemoryQuery query,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        await foreach (var node in _store.QueryNodesAsync(query, ct))
+        using var activity = MemoryActivitySource.StartQuery("FindNodes");
+        try
         {
-            _cache.Set(node.Id, node);
-            yield return new QueryResult { Type = ResultType.Node, Node = node };
+            var nodes = query.AsOf.HasValue
+                ? _store.QueryNodesAsOfAsync(query, query.AsOf.Value, ct)
+                : _store.QueryNodesAsync(query, ct);
+
+            await foreach (var node in nodes)
+            {
+                _cache.Set(node.Id, node);
+                yield return new QueryResult { Type = ResultType.Node, Node = node };
+            }
+        }
+        finally
+        {
+            // activity is disposed, which stops the span
         }
     }
 
@@ -71,21 +98,32 @@ public sealed class MemoryQueryExecutor
         MemoryQuery query,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        var segments = await _store.FindPathAsync(
-            query.StartNodeId!,
-            query.TargetNodeId!,
-            query.EdgeType ?? "DerivedFrom",
-            query.MaxDepth ?? 10,
-            ct);
-
-        if (segments.Count > 0)
+        using var activity = MemoryActivitySource.StartQuery("FindPath");
+        try
         {
-            yield return new QueryResult
+            var segments = await _store.FindPathAsync(
+                query.StartNodeId!,
+                query.TargetNodeId!,
+                query.EdgeType ?? "DerivedFrom",
+                query.MaxDepth ?? 10,
+                query.NodeFilter,
+                query.MinWeight,
+                query.MinConfidence,
+                ct);
+
+            if (segments.Count > 0)
             {
-                Type = ResultType.Path,
-                Path = segments.Select(s => s.NodeId).ToList(),
-                TotalWeight = segments.Sum(s => s.Weight)
-            };
+                yield return new QueryResult
+                {
+                    Type = ResultType.Path,
+                    Path = segments.Select(s => s.NodeId).ToList(),
+                    TotalWeight = segments.Sum(s => s.Weight)
+                };
+            }
+        }
+        finally
+        {
+            // activity disposed
         }
     }
 
@@ -93,21 +131,32 @@ public sealed class MemoryQueryExecutor
         MemoryQuery query,
         [EnumeratorCancellation] CancellationToken ct)
     {
-        await foreach (var (node, depth) in _store.TraverseAsync(
-            query.StartNodeId!,
-            query.EdgeType ?? "DerivedFrom",
-            query.MaxDepth ?? 3,
-            query.Limit ?? 100,
-            ct))
+        using var activity = MemoryActivitySource.StartQuery("Traverse");
+        try
         {
-            _cache.Set(node.Id, node);
-            yield return new QueryResult { Type = ResultType.Node, Node = node, Depth = depth };
+            await foreach (var (node, depth) in _store.TraverseAsync(
+                query.StartNodeId!,
+                query.EdgeType ?? "DerivedFrom",
+                query.MaxDepth ?? 3,
+                query.Limit ?? 100,
+                query.NodeFilter,
+                query.MinWeight,
+                query.MinConfidence,
+                ct))
+            {
+                _cache.Set(node.Id, node);
+                yield return new QueryResult { Type = ResultType.Node, Node = node, Depth = depth };
+            }
+        }
+        finally
+        {
+            // activity disposed
         }
     }
 
     /// <summary>
     /// Execute an insights query.
-    /// Note: Insights are implemented in SmartPipe.Memory.Health (v0.2.0).
+    /// Note: Insights are implemented in SmartPipe.Memory.Health (v0.1.1).
     /// In v0.1.0, this method returns an empty result set.
     /// </summary>
     private static async IAsyncEnumerable<QueryResult> ExecuteFindInsightsAsync(
@@ -116,5 +165,30 @@ public sealed class MemoryQueryExecutor
     {
         await Task.CompletedTask;
         yield break;
+    }
+
+    /// <summary>
+    /// Execute Leiden clustering.
+    /// </summary>
+    public async Task<IReadOnlyList<Cluster>> ClusterAsync(CancellationToken ct = default)
+    {
+        using var activity = MemoryActivitySource.StartClustering(0);
+        _metrics?.RecordQuery();
+        try
+        {
+            return await _store.ClusterAsync(ct);
+        }
+        finally
+        {
+            // activity disposed
+        }
+    }
+
+    /// <summary>
+    /// Get all outgoing edges keyed by source node id.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<Edge>> GetOutEdges()
+    {
+        return _store.GetOutEdges();
     }
 }

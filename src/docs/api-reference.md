@@ -1,4 +1,4 @@
-# SmartPipe.Memory API Reference v0.1.0
+# SmartPipe.Memory API Reference v0.1.1
 
 ## SmartPipe.Memory.Graph
 
@@ -96,10 +96,14 @@
 | `UpsertEdgeAsync(edge, ct)` | `Task<Edge>` | Insert or update edge |
 | `DeleteEdgeAsync(id, ct)` | `Task` | Delete edge |
 | `QueryNodesAsync(query, ct)` | `IAsyncEnumerable<Node>` | Stream matching nodes |
-| `FindPathAsync(from, to, type, depth, ct)` | `Task<IReadOnlyList<PathSegment>>` | Find shortest path |
-| `TraverseAsync(start, type, depth, limit, ct)` | `IAsyncEnumerable<(Node, int)>` | Traverse graph |
+| `QueryNodesAsOfAsync(query, asOf, ct)` | `IAsyncEnumerable<Node>` | Stream nodes at point in time |
+| `QueryEdgesAsOfAsync(query, asOf, ct)` | `IAsyncEnumerable<Edge>` | Stream edges at point in time |
+| `FindPathAsync(from, to, type, depth, nodeFilter?, minWeight?, minConfidence?, ct)` | `Task<IReadOnlyList<PathSegment>>` | Find shortest path |
+| `TraverseAsync(start, type, depth, limit, nodeFilter?, minWeight?, minConfidence?, ct)` | `IAsyncEnumerable<(Node, int)>` | Traverse graph |
+| `ClusterAsync(ct)` | `Task<IReadOnlyList<Cluster>>` | Run Leiden clustering |
 | `QueryInsightsAsync(query, ct)` | `IAsyncEnumerable<Edge>` | Query insights |
 | `GetWeakenedEdgesFromAsync(id, ct)` | `Task<IReadOnlyList<Edge>>` | Get edges with weight below 0.3 |
+| `GetOutEdges()` | `IReadOnlyDictionary<string, IReadOnlyList<Edge>>` | All outgoing edges |
 | `InsertInsightAsync(insight, ct)` | `Task` | Save insight |
 | `UpdateNodeHealthAsync(...)` | `Task` | Update health with version check |
 | `MetricsChannel` | `ChannelWriter<MetricsEntry>` | Metrics buffer |
@@ -138,17 +142,19 @@
 
 ### InMemoryGraphStore
 
-Implements `IGraphStore`. All operations in memory.
+Implements `IGraphStore`. All operations in memory.  
+Exposes `Classifier : AutoClassifier?` for optional node classification.
 
 ### SqliteWALStore
 
-Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
+Implements `IGraphStore`. Requires `InitializeAsync()` after creation.  
+Exposes `Classifier : AutoClassifier?` (delegates to in-memory store).
 
 ### SqliteSchema
 
 | Member | Type | Description |
 |:---|:---|:---|
-| `CreateTables` | `string` | Complete DDL |
+| `CreateTables` | `string` | Complete DDL (includes insights table) |
 
 ### SchemaVersion
 
@@ -164,8 +170,11 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 
 | Method | Returns | Description |
 |:---|:---|:---|
+| `Create(store, cache)` | `MemoryQueryBuilder` | Factory method without DI |
 | `Nodes(type)` | `MemoryQueryBuilder` | Filter by node type |
 | `Where(prop, op, val)` | `MemoryQueryBuilder` | Filter by property |
+| `And()` | `MemoryQueryBuilder` | Combine next filter with AND |
+| `Or()` | `MemoryQueryBuilder` | Combine next filter with OR |
 | `ConnectedVia(type)` | `MemoryQueryBuilder` | Filter by edge type |
 | `StartFrom(id)` | `MemoryQueryBuilder` | Start traversal |
 | `To(id)` | `MemoryQueryBuilder` | Target node |
@@ -174,17 +183,27 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 | `MaxDepth(depth)` | `MemoryQueryBuilder` | Set max depth |
 | `Limit(n)` | `MemoryQueryBuilder` | Limit results |
 | `OrderBy(prop, desc)` | `MemoryQueryBuilder` | Sort results |
+| `AsOf(timestamp)` | `MemoryQueryBuilder` | Time-travel query |
+| `Between(from, to)` | `MemoryQueryBuilder` | Time-range query |
+| `WhereNode(predicate)` | `MemoryQueryBuilder` | Filter nodes during traversal |
+| `MinWeight(weight)` | `MemoryQueryBuilder` | Minimum edge weight |
+| `MinConfidence(confidence)` | `MemoryQueryBuilder` | Minimum edge confidence |
+| `FindClusters(ct)` | `IAsyncEnumerable<QueryResult>` | Run Leiden clustering |
+| `EstimateNeighbors(nodeId)` | `double` | Estimate unique neighbors |
+| `HasDegree(nodeId)` | `int` | Count outgoing edges |
 | `ExecuteAsync(ct)` | `IAsyncEnumerable<QueryResult>` | Execute query |
 
 ### MemoryQueryExecutor
 
 | Constructor | Description |
 |:---|:---|
-| `MemoryQueryExecutor(store, cache)` | Create executor |
+| `MemoryQueryExecutor(store, cache, metrics?)` | Create executor with optional metrics |
 
 | Method | Returns | Description |
 |:---|:---|:---|
 | `ExecuteAsync(query, ct)` | `IAsyncEnumerable<QueryResult>` | Execute query |
+| `ClusterAsync(ct)` | `Task<IReadOnlyList<Cluster>>` | Run clustering |
+| `GetOutEdges()` | `IReadOnlyDictionary<string, IReadOnlyList<Edge>>` | All outgoing edges |
 
 ### MemoryQuery
 
@@ -199,6 +218,12 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 | `Limit` | `int?` | Max results |
 | `OrderBy` | `string?` | Sort property |
 | `OrderDesc` | `bool` | Sort descending |
+| `AsOf` | `DateTime?` | Time-travel timestamp |
+| `TimeRangeFrom` | `DateTime?` | Time range start |
+| `TimeRangeTo` | `DateTime?` | Time range end |
+| `MinWeight` | `double?` | Minimum edge weight |
+| `MinConfidence` | `double?` | Minimum edge confidence |
+| `NodeFilter` | `Func<Node, bool>?` | Node filter predicate |
 | `Type` | `QueryType` | Query type |
 
 ### QueryType
@@ -215,8 +240,8 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 | Type | Description |
 |:---|:---|
 | `PropertyFilter` | Filter by property, operator, value |
-| `And` | Logical AND (v0.2.0) |
-| `Or` | Logical OR (v0.2.0) |
+| `And` | Logical AND |
+| `Or` | Logical OR |
 
 ### FilterOperator
 
@@ -247,35 +272,14 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 | `Path` | Path result |
 | `Cluster` | Cluster result |
 
-## SmartPipe.Memory.Caching
-
-### NodeCache
-
-| Constructor | Description |
-|:---|:---|
-| `NodeCache(maxSize)` | Create cache |
-
-| Method | Returns | Description |
-|:---|:---|:---|
-| `Count` | `int` | Number of cached nodes |
-| `TryGet(id)` | `bool, Node?` | Get from cache |
-| `Set(id, node)` | `void` | Store in cache |
-| `Invalidate(id)` | `void` | Remove from cache |
-| `Clear()` | `void` | Clear all |
-
 ## SmartPipe.Memory.Algorithms
 
-### BreadthFirstSearch
+### AutoClassifier
 
 | Method | Returns | Description |
 |:---|:---|:---|
-| `FindPath(edges, from, to, type, depth, ct)` | `IReadOnlyList<PathSegment>` | Find shortest path |
-
-### DijkstraShortestPath
-
-| Method | Returns | Description |
-|:---|:---|:---|
-| `FindPath(edges, from, to, type, depth, ct)` | `IReadOnlyList<PathSegment>` | Find weighted shortest path |
+| `Classify(node)` | `string` | Determine node type from properties |
+| `ClassifyEdge(from, to)` | `EdgeType` | Determine edge type from nodes |
 
 ### LeidenClusterer
 
@@ -283,6 +287,27 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 |:---|:---|:---|
 | `Cluster(nodes, edges, iterations, improvement, ct)` | `IReadOnlyList<Cluster>` | Run clustering |
 | `CurrentQuality` | `double` | Current modularity |
+
+### PageRank
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `Compute(nodes, edges, damping, tolerance, maxIterations, ct)` | `IReadOnlyDictionary<string, double>` | Compute PageRank |
+
+### BetweennessCentrality
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `Compute(nodes, edges, ct)` | `IReadOnlyDictionary<string, double>` | Compute betweenness (Brandes) |
+| `ComputeForSubset(nodes, edges, subset, ct)` | `IReadOnlyDictionary<string, double>` | Compute for node subset |
+
+### GraphReorderer
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `ReorderByCommunity(nodes, clusters)` | `IReadOnlyList<Node>` | Reorder by community |
+| `ReorderByDegree(nodes, edges)` | `IReadOnlyList<Node>` | Reorder by degree |
+| `ReorderByAccessibility(nodes)` | `IReadOnlyList<Node>` | Reorder by health |
 
 ### DegreeCentrality
 
@@ -301,6 +326,123 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 | `Add(nodeId)` | `void` | Add node hash |
 | `Estimate()` | `double` | Get estimate |
 | `EstimateNeighbors(edges, nodeId)` | `double` | Estimate unique neighbors |
+
+## SmartPipe.Memory.Health
+
+### HealthVector
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `Create(...)` | `HealthVector` | Create with default weights |
+| `CreateWithWeights(...)` | `HealthVector` | Create with custom weights |
+
+### HealthVectorCalculator
+
+| Constructor | Description |
+|:---|:---|
+| `HealthVectorCalculator(store, clock?)` | Create calculator |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `ComputeAsync(nodeId, history, retryBudget?, ct)` | `Task<HealthVector>` | Compute from metric history |
+| `ComputeFromSnapshotAsync(nodeId, snapshot, retryBudget?, ct)` | `Task<HealthVector>` | Compute from single snapshot |
+
+### BottleneckPredictor
+
+| Constructor | Description |
+|:---|:---|
+| `BottleneckPredictor(calculator, store, latencyThreshold?, healthThreshold?, clock?)` | Create predictor |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `PredictAsync(nodeId, current, historical, historicalTimestamp, ct)` | `Task<BottleneckPrediction>` | Predict bottleneck |
+
+### InsightGenerator
+
+| Constructor | Description |
+|:---|:---|
+| `InsightGenerator(predictor, store)` | Create generator |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `GenerateFromPredictionAsync(prediction, ct)` | `Task<Insight>` | Generate insight from prediction |
+| `AnalyzeNodeAsync(nodeId, current, historical, ct)` | `Task<Insight?>` | Analyze single node |
+| `GenerateRetryBudgetExhaustedAsync(nodeId, budget, ct)` | `Task<Insight>` | Generate retry insight |
+| `GenerateClusterDiscoveredAsync(cluster, ct)` | `Task<Insight>` | Generate cluster insight |
+
+### MemoryDecayPolicy
+
+| Constructor | Description |
+|:---|:---|
+| `MemoryDecayPolicy(halfLife?, minWeight?, clock?)` | Create policy |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `ComputeStrength(initialWeight, establishedAt, accessCount)` | `double` | Decayed weight |
+| `ComputeStrength(edge, accessCount)` | `double` | Decayed edge weight |
+| `IsWeakened(edge, accessCount)` | `bool` | Whether edge is weakened |
+
+### ConflictResolver
+
+| Constructor | Description |
+|:---|:---|
+| `ConflictResolver(decayPolicy, clock?)` | Create resolver |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `ResolveAsync(existingEdge, store, ct)` | `Task` | Weaken existing edge |
+| `HasConflict(edge1, edge2)` | `bool` | Check conflict |
+
+### InsightAgent
+
+Background service that periodically analyzes node health.
+
+| Constructor | Description |
+|:---|:---|
+| `InsightAgent(store, generator, consolidation, interval?)` | Create agent |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `StartAsync(ct)` | `Task` | Start agent |
+| `StopAsync(ct)` | `Task` | Stop agent |
+
+### MetricsBackgroundConsumer
+
+| Constructor | Description |
+|:---|:---|
+| `MetricsBackgroundConsumer(reader, store, calculator)` | Create consumer |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `StartAsync()` | `Task` | Start consuming |
+| `StopAsync()` | `Task` | Stop consuming |
+
+### MemoryHealthCheck
+
+| Constructor | Description |
+|:---|:---|
+| `MemoryHealthCheck(store)` | Create check |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `Check()` | `MemoryHealthStatus` | Check health |
+| `CheckAsync(ct)` | `Task<MemoryHealthStatus>` | Check health async |
+
+## SmartPipe.Memory.Caching
+
+### NodeCache
+
+| Constructor | Description |
+|:---|:---|
+| `NodeCache(maxSize)` | Create cache |
+
+| Method | Returns | Description |
+|:---|:---|:---|
+| `Count` | `int` | Number of cached nodes |
+| `TryGet(id)` | `bool, Node?` | Get from cache |
+| `Set(id, node)` | `void` | Store in cache |
+| `Invalidate(id)` | `void` | Remove from cache |
+| `Clear()` | `void` | Clear all |
 
 ## SmartPipe.Memory.Infrastructure
 
@@ -337,6 +479,8 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 | `RecordStoreLatency(ms)` | Record latency |
 
 ### MemoryActivitySource
+
+Static class for creating trace spans.
 
 | Method | Returns | Description |
 |:---|:---|:---|
@@ -381,3 +525,4 @@ Implements `IGraphStore`. Requires `InitializeAsync()` after creation.
 | `ConnectionString` | `string` | "memory.db" | SQLite path |
 | `MaxCacheSize` | `int` | 10000 | LRU cache size |
 | `MetricsBufferCapacity` | `int` | 10000 | Metrics buffer |
+| `EnableAutoClassification` | `bool` | false | Auto-classify nodes on upsert |

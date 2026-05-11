@@ -45,11 +45,24 @@ public static class SqliteSchema
             UNIQUE(from_node_id, to_node_id, type)
         );
 
+        CREATE TABLE IF NOT EXISTS insights (
+            id              TEXT PRIMARY KEY NOT NULL,
+            type            TEXT NOT NULL,
+            title           TEXT NOT NULL,
+            description     TEXT,
+            related_node_ids TEXT NOT NULL DEFAULT '[]',
+            confidence      REAL NOT NULL DEFAULT 0.0,
+            severity        TEXT NOT NULL DEFAULT 'Info',
+            generated_at    TEXT NOT NULL,
+            dismissed_at    TEXT DEFAULT NULL
+        );
+
         CREATE INDEX IF NOT EXISTS idx_nodes_type ON nodes(type);
         CREATE INDEX IF NOT EXISTS idx_nodes_type_health ON nodes(type, health_score);
         CREATE INDEX IF NOT EXISTS idx_nodes_health ON nodes(health_score);
         CREATE INDEX IF NOT EXISTS idx_edges_from_type ON edges(from_node_id, type);
         CREATE INDEX IF NOT EXISTS idx_edges_to ON edges(to_node_id);
+        CREATE INDEX IF NOT EXISTS idx_insights_type ON insights(type);
 
         CREATE VIEW IF NOT EXISTS v_degraded_nodes AS
         SELECT id, type, label, health_score, failure_prob, predicted_latency_ms, resource_strain

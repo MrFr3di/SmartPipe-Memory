@@ -1,9 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>0.1.1</Version>
+    <Authors>SmartPipe</Authors>
+    <Description>
+      Embedded graph memory layer for the SmartPipe ecosystem. Type-safe Fluent API,
+      in-memory traversals, SQLite WAL persistence, time-travel queries,
+      predictive analytics, and OpenTelemetry support.
+    </Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>
+      graph;memory;etl;pipeline;embedded;graph-database;sqlite;bitemporal;time-travel;
+      fluent-api;opentelemetry;predictive-analytics;health-monitoring;resilience;
+      performance;bfs;dijkstra;leiden;pagerank;betweenness-centrality
+    </PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,4 +26,8 @@
     <PackageReference Include="SmartPipe.Core" Version="1.0.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>

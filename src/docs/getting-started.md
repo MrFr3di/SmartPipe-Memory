@@ -1,9 +1,10 @@
-# Getting Started with SmartPipe.Memory
+# Getting Started with SmartPipe.Memory v0.1.1
 
 ## Installation
 
 dotnet add package SmartPipe.Memory
 dotnet add package SmartPipe.Memory.Extensions
+dotnet add package SmartPipe.Memory.Health
 
 ## 1. Create a Memory Store
 
@@ -46,12 +47,30 @@ SQLite (production):
     var executor = new MemoryQueryExecutor(store, cache);
     var query = new MemoryQueryBuilder(executor);
 
+    // Find all files
+    await foreach (var result in query.Nodes("File").ExecuteAsync())
+    {
+        Console.WriteLine(result.Node.Label);
+    }
+
+    // Find files with low health
     await foreach (var result in query
         .Nodes("File")
         .Where("HealthScore", FilterOperator.LessThan, 0.5)
         .ExecuteAsync())
     {
         Console.WriteLine($"{result.Node.Label}: {result.Node.HealthScore}");
+    }
+
+    // Find files with compound filter (AND/OR)
+    await foreach (var result in query
+        .Nodes("File")
+        .Where("HealthScore", FilterOperator.LessThan, 0.5)
+        .Or()
+        .Where("FailureProb", FilterOperator.GreaterThan, 0.1)
+        .ExecuteAsync())
+    {
+        Console.WriteLine($"{result.Node.Label}: at risk");
     }
 
 ## 5. Find Shortest Path
@@ -63,7 +82,36 @@ SQLite (production):
         Console.WriteLine($"Path: {string.Join(" -> ", result.Path)}");
     }
 
-## 6. Integrate with SmartPipe Pipeline
+## 6. Time-Travel Query
+
+    // See what the graph looked like 7 days ago
+    await foreach (var result in query
+        .Nodes("File")
+        .AsOf(DateTime.UtcNow.AddDays(-7))
+        .ExecuteAsync())
+    {
+        Console.WriteLine($"{result.Node.Label} existed 7 days ago");
+    }
+
+## 7. Clustering
+
+    // Find communities in the graph
+    await foreach (var result in query.FindClusters())
+    {
+        Console.WriteLine($"Cluster {result.Cluster!.Id}: {result.Cluster.Size} nodes");
+    }
+
+## 8. Node Statistics
+
+    // Estimate unique neighbors
+    var estimate = query.EstimateNeighbors("file1");
+    Console.WriteLine($"~{estimate} unique neighbors");
+
+    // Count direct connections
+    var degree = query.HasDegree("file1");
+    Console.WriteLine($"{degree} direct connections");
+
+## 9. Integrate with SmartPipe Pipeline
 
     var pipeline = new SmartPipeChannel<MyInput, MyOutput>(options);
     pipeline.AddSource(mySource);
@@ -72,9 +120,21 @@ SQLite (production):
     pipeline.UseMemory(store);
     await pipeline.RunAsync();
 
-## 7. Dependency Injection
+## 10. Auto‑Classification
 
-In-memory:
+    // Enable auto‑classification to detect node types automatically
+    builder.Services.AddSmartPipeMemory(options =>
+    {
+        options.EnableAutoClassification = true;
+    });
+
+    // Nodes with empty Type will be classified based on Properties:
+    //   hash + path → "File"
+    //   sql + connectionString → "DatabaseRecord"
+
+## 11. Dependency Injection
+
+In‑memory:
     builder.Services.AddSmartPipeMemory();
 
 SQLite:

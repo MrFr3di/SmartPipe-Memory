@@ -1,14 +1,14 @@
-# SmartPipe.Memory v0.1.0 — Complete Feature Reference
+# SmartPipe.Memory v0.1.1 — Complete Feature Reference
 
 ## Overview
 
-SmartPipe.Memory is an embedded graph memory layer for the SmartPipe ecosystem. It provides a type-safe graph database with predictive analytics, designed for ETL pipelines and AI agents.
+SmartPipe.Memory is an embedded graph memory layer for the SmartPipe ecosystem. It provides a type‑safe graph database with predictive analytics, designed for ETL pipelines and AI agents.
 
 ## Architecture
 
 SmartPipe.Memory                    # Core graph engine
 SmartPipe.Memory.Extensions         # Integration with SmartPipe.Core
-SmartPipe.Memory.Health             # Predictive analytics (v0.2.0)
+SmartPipe.Memory.Health             # Predictive analytics
 
 ## Core Engine
 
@@ -19,7 +19,7 @@ Edge — Graph edge: relationship with full transformation history
 EdgeType — DerivedFrom, DuplicateOf, VersionOf, AggregatedFrom, FilteredFrom, FeedsInto
 Bitemporal — ValidFrom, ValidTo, TxTime on every node and edge
 Cluster — Result of Leiden community detection
-Insight — Predictive analytics insight (placeholder for v0.2.0)
+Insight — Predictive analytics insight
 
 ### Node Properties
 
@@ -63,29 +63,29 @@ Metadata — Additional data (Dictionary string, string or null)
 
 ### InMemoryGraphStore
 
-In-memory graph store for testing and development. All traversals execute in memory for maximum performance.
+In‑memory graph store for testing and development. All traversals execute in memory for maximum performance.
 
 Features:
-
 - ConcurrentDictionary for nodes and edges
 - ReaderWriterLockSlim for write operations
-- All BFS, Dijkstra, Leiden algorithms execute here
+- All algorithms execute here (traversal, clustering, centrality)
 - Thread-safe concurrent reads and writes
+- Optional AutoClassifier for automatic node type detection
 
 Use when: Testing, CI, development, graphs up to 100K nodes.
 
 ### SqliteWALStore
 
-SQLite-backed store with WAL mode for production.
+SQLite‑backed store with WAL mode for production.
 
 Features:
-
 - Loads all data into InMemoryGraphStore at startup
 - Writes to SQLite for durability
 - AsyncLock for exclusive SQLite access
-- Automatic schema creation
+- Automatic schema creation (includes insights table)
 - Supports batch insert, 100 nodes per batch
 - Data survives restarts
+- Optional AutoClassifier (delegates to in‑memory store)
 
 Use when: Production, FlowKeep, graphs of any size.
 
@@ -96,20 +96,22 @@ CreateSqlite — Creates SqliteWALStore for production, requires InitializeAsync
 
 ### SqliteSchema
 
-Tables: nodes, edges
-Indexes: by type, by health_score, by from_node_id and type, by to_node_id
+Tables: nodes, edges, insights
+Indexes: by type, by health_score, by from_node_id and type, by to_node_id, by insights type
 Views: v_degraded_nodes — nodes with health_score below 0.7
 
 ## Query Engine
 
 ### Fluent API
 
-Type-safe C# API for building queries. No text-based query language. Safety guaranteed by the compiler.
+Type‑safe C# API for building queries. No text‑based query language. Safety guaranteed by the compiler.
 
 ### MemoryQueryBuilder Methods
 
 Nodes(type) — Filter by node type: "File", "Record", "Transformer"
 Where(property, operator, value) — Filter by HealthScore, FailureProb, ResourceStrain, PredictedLatencyMs
+And() — Combine next filter with logical AND (default)
+Or() — Combine next filter with logical OR
 ConnectedVia(edgeType) — Filter by edge type
 StartFrom(nodeId) — Start traversal from this node
 To(nodeId) — Target node for pathfinding
@@ -118,13 +120,21 @@ Traverse(edgeType, maxDepth) — Traverse graph from current start node
 MaxDepth(depth) — Maximum traversal depth
 Limit(n) — Maximum number of results
 OrderBy(property, descending) — Sort results
+AsOf(timestamp) — Time‑travel: return graph state at a point in time
+Between(from, to) — Time‑travel: return changes in a time range
+WhereNode(predicate) — Filter nodes during traversal
+MinWeight(weight) — Minimum edge weight for pathfinding
+MinConfidence(confidence) — Minimum edge confidence for pathfinding
+FindClusters() — Run Leiden clustering and return clusters
+EstimateNeighbors(nodeId) — Estimate unique neighbors using HyperLogLog
+HasDegree(nodeId) — Count direct outgoing edges
 ExecuteAsync() — Execute query and stream results
 
 ### FilterNode
 
 PropertyFilter — Filter by property name, operator, and value
-And — Logical AND of two filters (v0.2.0)
-Or — Logical OR of two filters (v0.2.0)
+And — Logical AND of two filters
+Or — Logical OR of two filters
 
 ### FilterOperator
 
@@ -135,7 +145,7 @@ LessThan, GreaterThan, Equals
 FindNodes — Find nodes matching filters
 FindPath — Find shortest path between two nodes
 Traverse — Traverse graph from starting node
-FindInsights — Find generated insights (placeholder for v0.2.0)
+FindInsights — Find generated insights
 
 ### QueryResult
 
@@ -149,47 +159,94 @@ Depth — Depth in traversal for Traverse queries
 
 ## Algorithms
 
-### BreadthFirstSearch (BFS)
+### GraphTraversalEngine (internal)
 
-Finds the shortest path by number of edges.
-Complexity: O(V + E)
-Input: fromNodeId, toNodeId, edgeType, maxDepth
-Output: List of PathSegment
-
-### DijkstraShortestPath
-
-Finds the shortest weighted path. Edge weight is inverse of strength.
-Complexity: O(E + V log V) with PriorityQueue
-Input: fromNodeId, toNodeId, edgeType, maxDepth
-Output: List of PathSegment
+Shared engine for BFS‑based pathfinding and traversal. Supports node filters, minimum edge weight, and minimum edge confidence.
 
 ### LeidenClusterer
 
-Leiden community detection algorithm. Optimizes Newman-Girvan modularity.
+Leiden community detection. Optimizes Newman‑Girvan modularity.
 Complexity: O(E) per iteration
-Input: All nodes and edges
-Output: List of Cluster
+Accessible via FindClusters() in MemoryQueryBuilder.
 
-Phases:
+### PageRank
 
-1. Local moving — move nodes between communities
-2. Refinement — refine community boundaries
-3. Aggregation — compress communities into nodes
+Computes node importance.
+Complexity: O(E) per iteration
+
+### BetweennessCentrality
+
+Identifies bridge nodes using Brandes' algorithm.
+Complexity: O(V × E) for full computation, O(V × E) for subset.
+
+### GraphReorderer
+
+Reorders nodes for better cache locality during traversals. Supports reordering by community, degree, and accessibility.
 
 ### DegreeCentrality
 
 Counts direct connections of a node.
 Complexity: O(1) with indexes
-Input: nodeId
-Output: Number of outgoing edges (int)
+Accessible via HasDegree() in MemoryQueryBuilder.
 
 ### CardinalityEstimator
 
 Estimates unique neighbors using HyperLogLog from SmartPipe.Core.
 Complexity: O(1) memory, approximately 4KB
 Accuracy: approximately 3 percent with precision 12
-Input: nodeId
-Output: Estimated number of unique target nodes (double)
+Accessible via EstimateNeighbors() in MemoryQueryBuilder.
+
+### AutoClassifier
+
+Automatically classifies nodes by type based on properties (hash, path, sql, connectionString).
+Classifies edges based on hash equality and version patterns.
+Enabled via EnableAutoClassification in MemoryConfiguration.
+
+## Predictive Analytics (SmartPipe.Memory.Health)
+
+### HealthVector
+
+Contains predicted latency, smoothed throughput, failure probability, resource strain, and percentiles.
+HealthScore formula: 1.0 - (0.35 * FailureProbability + 0.35 * LatencyComponent + 0.30 * ResourceStrain)
+
+### HealthVectorCalculator
+
+Computes HealthVector from metric history using AdaptiveMetrics and ExponentialHistogram.
+
+### BottleneckPredictor
+
+Predicts bottlenecks by comparing current HealthVector with historical state.
+Provides confidence and estimated time to impact.
+
+### InsightGenerator
+
+Generates Insight objects from bottleneck predictions and graph state.
+Supports bottleneck, retry budget exhausted, and cluster discovered insights.
+
+### CognitiveConsolidation
+
+Groups repeated insights into higher‑confidence consolidated insights when the same pattern appears multiple times.
+
+### MemoryDecayPolicy
+
+Computes edge weight decay over time using an Ebbinghaus‑like forgetting curve.
+Adaptive: frequently accessed edges decay slower.
+
+### ConflictResolver
+
+Weakens existing edges when new contradictory facts are added, instead of deleting them.
+
+### InsightAgent
+
+Background service that periodically analyzes node health and generates insights.
+
+### MetricsBackgroundConsumer
+
+Consumes metrics from a channel and persists them to the graph store for health analysis.
+
+### MemoryHealthCheck
+
+Reports Healthy, Degraded, or Unhealthy based on store state.
 
 ## Infrastructure
 
@@ -198,18 +255,14 @@ Output: Estimated number of unique target nodes (double)
 LRU cache for frequently accessed nodes.
 Max size: 10000 by default.
 Point invalidation: only changed nodes are evicted.
-Thread-safe via lock.
+Thread‑safe via lock.
 
-Methods:
-TryGet(nodeId) — Get node from cache, returns bool and node
-Set(nodeId, node) — Store node in cache
-Invalidate(nodeId) — Remove node from cache
-Clear() — Remove all nodes
+Methods: TryGet, Set, Invalidate, Clear
 
 ### MemoryPools
 
 ObjectPool for Node and ObjectPool for Edge from SmartPipe.Core.
-Reduces GC pressure during high-throughput pipeline execution.
+Reduces GC pressure during high‑throughput pipeline execution.
 Capacity: 256 items each.
 
 ### MemoryDefaults
@@ -226,11 +279,11 @@ WeakenedEdgeThreshold = 0.3
 
 ### UseMemory
 
-Connects memory to any SmartPipe pipeline. Automatically registers pipeline topology when state changes to Running. Streams metrics through MetricsChannel.
+Connects memory to any SmartPipe pipeline. Automatically registers pipeline topology, streams metrics, and starts the metrics background consumer for health analysis.
 
 ### AsGraphSource
 
-Creates an ISource of Node from the graph store. Can be used as input to another pipeline.
+Creates an ISource of Node from the graph store.
 
 ### ToGraphSink
 
@@ -253,25 +306,24 @@ memory.store.latency_ms — Histogram, store operation latency in milliseconds
 ### Tracing
 
 Spans created for: ExecuteQuery, UpsertNode, UpsertEdge, Cluster.
-
 Tags: memory.query.type, memory.node.id, memory.edge.from, memory.edge.to, memory.nodes.count.
 
 ### EventCounters
 
 Usage: dotnet-counters monitor --process-id PID SmartPipe.Memory
-
-Counters: queries-per-second, nodes-total, cache-hit-rate.
+Counters: queries‑per‑second, nodes‑total, cache‑hit‑rate.
 
 ## Dependency Injection
 
-AddSmartPipeMemory — Register in-memory store for testing
-AddSmartPipeMemorySqlite — Register SQLite store for production, requires configuration callback
+AddSmartPipeMemory — Register in‑memory store
+AddSmartPipeMemorySqlite — Register SQLite store
 
 ## Configuration
 
 ConnectionString — SQLite database path, default "memory.db"
 MaxCacheSize — Maximum LRU cache size, default 10000
 MetricsBufferCapacity — Metrics channel capacity, default 10000
+EnableAutoClassification — Automatically classify nodes on upsert, default false
 
 ## Dependencies
 

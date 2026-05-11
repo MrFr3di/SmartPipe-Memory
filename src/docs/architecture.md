@@ -1,51 +1,55 @@
-# SmartPipe.Memory Architecture v0.1.0
+# SmartPipe.Memory Architecture v0.1.1
 
 ## Design Principles
 
-1. Embedded-first — no external servers, works in-process
-2. Type-safe queries — Fluent API only, no text-based query language
-3. In-memory traversals — all graph traversals execute in memory, SQLite is for durability only
+1. Embedded‑first — no external servers, works in‑process
+2. Type‑safe queries — Fluent API only, no text‑based query language
+3. In‑memory traversals — all graph traversals execute in memory, SQLite is for durability only
 4. Bitemporal data — every node and edge has ValidFrom, ValidTo, TxTime
 5. Minimal dependencies — only SmartPipe.Core and Microsoft.Data.Sqlite
-6. Observability-first — OpenTelemetry metrics and tracing from day one
+6. Observability‑first — OpenTelemetry metrics and tracing from day one
 7. Modular NuGet packages — SmartPipe.Memory (graph), SmartPipe.Memory.Health (analytics), SmartPipe.Memory.Extensions (integration)
 
 ## Package Structure
 
 SmartPipe.Memory                    Core graph engine
 SmartPipe.Memory.Extensions         Integration with SmartPipe.Core
-SmartPipe.Memory.Health             Predictive analytics (v0.2.0)
+SmartPipe.Memory.Health             Predictive analytics
 
 Dependencies:
 SmartPipe.Memory -> SmartPipe.Core, Microsoft.Data.Sqlite
-SmartPipe.Memory.Extensions -> SmartPipe.Memory, SmartPipe.Core
-SmartPipe.Memory.Health -> SmartPipe.Memory
+SmartPipe.Memory.Extensions -> SmartPipe.Memory, SmartPipe.Core, SmartPipe.Memory.Health
+SmartPipe.Memory.Health -> SmartPipe.Memory, SmartPipe.Core
 
 ## Component Diagram
 
 SmartPipe.Memory
-  Graph/          Node, Edge, EdgeType, Bitemporal, Cluster, Insight
-  Storage/        IGraphStore, InMemoryGraphStore, SqliteWALStore, StoreFactory
+  Graph/          Node, Edge, EdgeType, Cluster, Insight
+  Model/          MemoryQuery, FilterNode, QueryResult
+  Storage/        IGraphStore, InMemoryGraphStore, SqliteWALStore, GraphTraversalEngine, StoreFactory, SqliteSchema
   Query/          MemoryQueryBuilder (Fluent API), MemoryQueryExecutor
-  Algorithms/     BFS, Dijkstra, Leiden, DegreeCentrality, CardinalityEstimator
+  Algorithms/
+    Centrality/   PageRank, BetweennessCentrality, DegreeCentrality, GraphReorderer
+    Clustering/   LeidenClusterer
+    Estimation/   CardinalityEstimator
+    Classification/ AutoClassifier
   Caching/        NodeCache (LRU)
-  Infrastructure/ MemoryPools, MemoryDefaults, Guard, AtomicHelper
+  Infrastructure/ MemoryPools, MemoryDefaults, Guard
   Diagnostics/    MemoryMetrics, MemoryActivitySource, MemoryEventSource
 
 SmartPipe.Memory.Extensions
   MemoryPipelineExtensions  UseMemory, AsGraphSource, ToGraphSink, TransformToEdges
 
-SmartPipe.Memory.Health (v0.2.0)
-  HealthVector, Insight, BottleneckPredictor, MemoryDecayPolicy
+SmartPipe.Memory.Health
+  HealthVector, HealthVectorCalculator, BottleneckPredictor, InsightGenerator
+  CognitiveConsolidation, MemoryDecayPolicy, ConflictResolver
+  InsightAgent, MetricsBackgroundConsumer, MemoryHealthCheck
 
-## Data Model (ALHI)
+## Data Model
 
-Asset-Lineage-Health-Insight model, simplified for v0.1.0:
-
-Asset -> Node
-LineagePath -> Edge with TransformationStep chain
-HealthVector -> Node health fields (HealthScore, FailureProbability, etc.)
-Insight -> Placeholder for v0.2.0
+Node — graph node with identity, type, health metrics, and bitemporal fields.
+Edge — graph edge with weight, confidence, transformation steps, and bitemporal fields.
+Bitemporal fields (ValidFrom, ValidTo, TxTime) on every node and edge enable time‑travel queries.
 
 ## Storage Architecture
 
@@ -54,12 +58,12 @@ Insight -> Placeholder for v0.2.0
 Primary engine for all graph traversals.
 
 Data structures:
-- ConcurrentDictionary string, Node for nodes
-- ConcurrentDictionary string, List of Edge for outgoing edges
+- ConcurrentDictionary for nodes
+- ConcurrentDictionary for outgoing edges
 - ReaderWriterLockSlim for write serialization
-- List of Insight for insights
+- Optional AutoClassifier for node type detection
 
-All BFS, Dijkstra, Leiden algorithms execute directly on in-memory structures. No SQL generation for graph traversals.
+All traversal, clustering, and centrality algorithms execute directly on in‑memory structures. No SQL generation for graph traversals.
 
 ### SqliteWALStore
 
@@ -67,7 +71,7 @@ SQLite for durability only.
 
 Startup:
 1. Open SQLite connection
-2. Execute CreateTables (idempotent)
+2. Execute CreateTables (idempotent, includes insights table)
 3. Load all nodes into InMemoryGraphStore
 4. Load all edges into InMemoryGraphStore
 
@@ -81,96 +85,139 @@ Read path:
 1. Delegates directly to InMemoryGraphStore
 2. No SQLite access for reads
 
+### GraphTraversalEngine (internal)
+
+Shared engine for BFS‑based pathfinding and traversal. Used by both InMemoryGraphStore and SqliteWALStore. Supports:
+- Node filtering (WhereNode)
+- Minimum edge weight (MinWeight)
+- Minimum edge confidence (MinConfidence)
+
 ## Query Execution Flow
 
-1. MemoryQueryBuilder builds MemoryQuery object
-2. MemoryQueryExecutor.ExecuteAsync checks QueryType
-3. FindNodes: calls IGraphStore.QueryNodesAsync
-4. FindPath: calls IGraphStore.FindPathAsync
-5. Traverse: calls IGraphStore.TraverseAsync
-6. FindInsights: placeholder, returns empty
+1. MemoryQueryBuilder builds MemoryQuery object with filters, time‑travel parameters, and node/edge constraints.
+2. MemoryQueryExecutor.ExecuteAsync checks QueryType.
+3. FindNodes: calls IGraphStore.QueryNodesAsync or QueryNodesAsOfAsync.
+4. FindPath: calls IGraphStore.FindPathAsync with node filter, min weight, min confidence.
+5. Traverse: calls IGraphStore.TraverseAsync with node filter, min weight, min confidence.
+6. FindClusters: calls IGraphStore.ClusterAsync which invokes LeidenClusterer.
+7. FindInsights: delegates to IGraphStore.QueryInsightsAsync.
+8. EstimateNeighbors / HasDegree: direct calls to CardinalityEstimator / DegreeCentrality.
 
 Cache integration:
-- MemoryQueryExecutor checks NodeCache.TryGet before query
-- On cache hit, returns cached node
-- On cache miss, queries store and calls NodeCache.Set
+- MemoryQueryExecutor checks NodeCache.TryGet before query.
+- On cache hit, returns cached node.
+- On cache miss, queries store and calls NodeCache.Set.
 
-## Bitemporal Model
+## Time‑Travel Queries
 
-Every node and edge has:
-- ValidFrom: When the fact became true
-- ValidTo: When the fact ceased (null = currently valid)
-- TxTime: When recorded in the system
+MemoryQuery supports:
+- AsOf(timestamp) — returns graph state at a specific point in time.
+- Between(from, to) — returns changes within a time range.
 
-Enables time-aware queries in future versions.
-
-Source: AWS Neptune data lineage (2025), Kronroe bitemporal facts.
-
-## Resilience
-
-CircuitBreaker: Protects SqliteWALStore from overload. Not used in v0.1.0 but ready for integration.
-
-Optimistic concurrency: Node.Version field prevents lost updates. UpdateNodeHealthAsync checks expectedVersion.
-
-Graceful shutdown: DrainAsync stops accepting writes, flushes MetricsChannel, sets state to Drained.
+Filters: ValidFrom <= AsOf AND (ValidTo IS NULL OR ValidTo > AsOf).
 
 ## Algorithms
 
-### BFS
-- Finds shortest path by edge count
-- Uses Queue and HashSet for visited tracking
-- Reconstructs path via parent dictionary
-- Complexity: O(V + E)
+### GraphTraversalEngine
+- BFS‑based shortest path with node/edge filtering.
+- BFS‑based traversal with node/edge filtering.
+- Complexity: O(V + E).
 
-### Dijkstra
-- Finds shortest weighted path
-- Uses PriorityQueue with edge weight as cost
-- Complexity: O(E + V log V)
+### LeidenClusterer
+- Community detection via modularity optimization (Newman‑Girvan).
+- Complexity: O(E) per iteration.
 
-### Leiden
-- Community detection via modularity optimization
-- Newman-Girvan quality function
-- Phases: local moving, refinement, aggregation
-- Complexity: O(E) per iteration
+### PageRank
+- Node importance computation.
+- Complexity: O(E) per iteration.
+
+### BetweennessCentrality
+- Bridge node detection (Brandes' algorithm).
+- Complexity: O(V × E) full, O(V × E) subset.
+
+### GraphReorderer
+- Reorders nodes for cache locality (by community, degree, accessibility).
 
 ### DegreeCentrality
-- Counts direct outgoing edges
-- Complexity: O(1) with dictionary lookup
+- Direct connection count.
+- Complexity: O(1).
 
 ### CardinalityEstimator
-- Estimates unique neighbors using HyperLogLog from SmartPipe.Core
-- Precision 12 gives approximately 3 percent accuracy
-- Memory: O(1), approximately 4KB
+- Unique neighbor estimation via HyperLogLog (SmartPipe.Core).
+- Complexity: O(1) memory (~4KB), ~3% accuracy.
+
+### AutoClassifier
+- Detects node type from properties (hash, path, sql, connectionString).
+- Detects edge type from nodes (DuplicateOf, VersionOf).
+- Enabled via EnableAutoClassification flag.
+
+## Predictive Analytics (SmartPipe.Memory.Health)
+
+### HealthVector
+- Aggregates predicted latency, throughput, failure probability, resource strain, percentiles.
+- HealthScore formula: 1.0 - (0.35*FailureProbability + 0.35*LatencyComponent + 0.30*ResourceStrain).
+
+### HealthVectorCalculator
+- Uses AdaptiveMetrics and ExponentialHistogram from SmartPipe.Core.
+- Computes HealthVector from MetricsEntry history.
+
+### BottleneckPredictor
+- Temporal comparison of current vs historical HealthVector.
+- Provides confidence and estimated time to impact.
+
+### InsightGenerator
+- Creates Insight objects from predictions, retry budget exhaustion, clusters.
+
+### CognitiveConsolidation
+- Merges repeated insights into higher‑confidence consolidated insights.
+
+### MemoryDecayPolicy
+- Edge weight decay following Ebbinghaus‑like curve.
+- Adaptive: access frequency slows decay.
+
+### ConflictResolver
+- Weakens existing edges on new contradictory facts instead of deletion.
+
+### InsightAgent
+- Background service that periodically analyzes unhealthy nodes and generates insights.
+
+### MetricsBackgroundConsumer
+- Reads metrics from channel, computes HealthVector, updates node health.
+
+## Resilience
+
+CircuitBreaker: Ready for SqliteWALStore integration.
+Optimistic concurrency: Node.Version field prevents lost updates.
+Graceful shutdown: DrainAsync stops writes, flushes metrics channel.
 
 ## Observability
 
-### Metrics
-- System.Diagnostics.Metrics for zero-allocation export
-- Meter name: SmartPipe.Memory
-- Exported to Prometheus, Jaeger, Azure Monitor via OTLP
+### Metrics (MemoryMetrics)
+- memory.nodes.total, memory.edges.total (Gauge)
+- memory.queries.executed (Counter)
+- memory.cache.hit_rate (Gauge)
+- memory.store.latency_ms (Histogram)
 
-### Tracing
-- System.Diagnostics.ActivitySource
-- Spans: ExecuteQuery, UpsertNode, UpsertEdge, Cluster
-- Tags: memory.query.type, memory.node.id, memory.edge.from
+### Tracing (MemoryActivitySource)
+- Spans: ExecuteQuery, UpsertNode, UpsertEdge, Cluster.
+- Tags: memory.query.type, memory.node.id, memory.edge.from.
 
-### EventCounters
-- For dotnet-counters monitor
-- Counters: queries-per-second, nodes-total, cache-hit-rate
+### EventCounters (MemoryEventSource)
+- Counters: queries‑per‑second, nodes‑total, cache‑hit‑rate.
 
 ## Future: Hybrid Search (v1.0.0)
 
 Node.Embedding field (float[]) enables:
-- Semantic search via SemanticallyCloseTo in Fluent API
-- Integration with SmartPipe.Vector for FAISS, HNSW, DiskANN backends
-- Combined graph and vector queries
+- Semantic search via SemanticallyCloseTo in Fluent API.
+- Integration with SmartPipe.Vector for FAISS, HNSW, DiskANN backends.
+- Combined graph and vector queries.
 
 ## Inspiration
 
-AWS Neptune data lineage blog (2025) — bitemporal model with valid_from/valid_to
+AWS Neptune data lineage blog (2025) — bitemporal model
 Netflix E2EGraph (2024) — temporal comparison for bottleneck prediction
 Kronroe — bitemporal facts as engine primitive
-Boost.Graph (C++) — Newman-Girvan modularity for Leiden clustering
-ExRam.Gremlinq — type-safe graph queries without text DSL
-LanceDB, SQLite — embedded-first, zero-config philosophy
+Boost.Graph (C++) — Newman‑Girvan modularity for Leiden clustering
+ExRam.Gremlinq — type‑safe graph queries without text DSL
+LanceDB, SQLite — embedded‑first, zero‑config philosophy
 OpenTelemetry .NET (Microsoft) — ActivitySource, Meter, EventCounters
