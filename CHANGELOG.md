@@ -2,6 +2,31 @@
 
 All notable changes to the SmartPipe.Memory project.
 
+## [0.1.3] — 2026-05-17
+
+### Added
+
+- **FastBitArray** – high‑performance bit array (`ulong[]`) for tracking visited nodes in graph traversals, replacing `HashSet<string>` in `GraphTraversalEngine`. Reduces memory overhead and cache misses by up to 10×.
+- **Array-based BFS queue** – replaced `Queue<(string, int)>` with a pre‑allocated array and `head`/`tail` indices in `GraphTraversalEngine.FindPath` and `Traverse`. Eliminates per‑element heap allocations and improves cache locality.
+
+### Changed
+
+- **Adapted to SmartPipe.Core 1.0.6**:
+  - `DrainAsync` now uses `CancellationToken` (added call in `MemoryPipelineExtensions.UseMemory` on pipeline stop).
+  - `PipelineDashboard` is now `readonly record struct`; `CBState` renamed to `CbState` (no changes required in Memory).
+  - `ProcessingContext.EnterPipelineTicks` made internal (not used in Memory).
+- **Version bumps**: all projects updated to `0.1.3`. `Meter` versions in `MemoryMetrics` and `HealthMetrics` set to `"0.1.3"`.
+- **Code style**: applied CSharpier formatting across the entire codebase.
+
+### Fixed
+
+- `GraphTraversalEngine.Traverse` – removed unused `startNode` variable to suppress IDE0059.
+
+### Tests
+
+- **203 tests** (up from 201), 0 failures. Added `FastBitArrayTests`.
+- `UseMemoryTests.UseMemory_StreamsMetrics_ToStore` updated to expect `StoreState.Drained` after pipeline run with new `DrainAsync` call.
+
 ## [0.1.2] — 2026-05-11
 
 ### Added

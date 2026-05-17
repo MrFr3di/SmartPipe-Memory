@@ -173,6 +173,11 @@ Filters: ValidFrom <= AsOf AND (ValidTo IS NULL OR ValidTo > AsOf).
 - Detects edge type from nodes (DuplicateOf, VersionOf).
 - Enabled via EnableAutoClassification flag.
 
+### Traversal optimizations
+
+- FastBitArray replaces `HashSet<string>` for visited node tracking in BFS, reducing memory footprint and cache misses.
+- Array-based BFS queue replaces `Queue<T>` with a pre‑allocated array and `head`/`tail` indices, eliminating heap allocations during traversal.
+
 ## Predictive Analytics (SmartPipe.Memory.Health)
 
 ### HealthVector
@@ -232,21 +237,25 @@ Graceful shutdown: DrainAsync stops writes, flushes metrics channel.
 ## Observability
 
 ### Metrics (MemoryMetrics)
+
 - memory.nodes.total, memory.edges.total (Gauge)
 - memory.queries.executed (Counter)
 - memory.cache.hit_rate (Gauge)
 - memory.store.latency_ms (Histogram)
 
 ### Tracing (MemoryActivitySource)
+
 - Spans: ExecuteQuery, UpsertNode, UpsertEdge, Cluster.
 - Tags: memory.query.type, memory.node.id, memory.edge.from.
 
 ### EventCounters (MemoryEventSource)
+
 - Counters: queries‑per‑second, nodes‑total, cache‑hit‑rate.
 
 ## Future: Hybrid Search (v1.0.0)
 
 Node.Embedding field (float[]) enables:
+
 - Semantic search via SemanticallyCloseTo in Fluent API.
 - Integration with SmartPipe.Vector for FAISS, HNSW, DiskANN backends.
 - Combined graph and vector queries.
@@ -259,4 +268,4 @@ Kronroe — bitemporal facts as engine primitive
 Boost.Graph (C++) — Newman‑Girvan modularity for Leiden clustering
 ExRam.Gremlinq — type‑safe graph queries without text DSL
 LanceDB, SQLite — embedded‑first, zero‑config philosophy
-OpenTelemetry .NET (Microsoft) — ActivitySource, Meter, EventCounters
+OpenTelemetry .NET (Microsoft) — ActivitySource, Meter, EventCounter

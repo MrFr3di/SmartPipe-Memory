@@ -15,9 +15,9 @@ SmartPipe.Memory is an embedded graph memory layer with predictive analytics, de
 
 | Package | Description | Version |
 |:---|:---|:---|
-| `SmartPipe.Memory` | Core graph engine | v0.1.2 |
-| `SmartPipe.Memory.Extensions` | Integration with SmartPipe.Core | v0.1.2 |
-| `SmartPipe.Memory.Health` | Predictive analytics & health monitoring | v0.1.2 |
+| `SmartPipe.Memory` | Core graph engine | v0.1.3 |
+| `SmartPipe.Memory.Extensions` | Integration with SmartPipe.Core | v0.1.3 |
+| `SmartPipe.Memory.Health` | Predictive analytics & health monitoring | v0.1.3 |
 
 ## Installation
 
@@ -58,7 +58,8 @@ await foreach (var r in query.ShortestPath("f1", "f2", "DuplicateOf").ExecuteAsy
 - OpenTelemetry metrics and tracing — ActivitySource, Meter, EventCounters
 - Dependency injection — AddSmartPipeMemory() / AddSmartPipeMemorySqlite()
 - Zero external servers — embedded in-process library
-- 201 tests, 0 failures — 79% line coverage, 65% branch coverage
+- FastBitArray and array-based BFS queue — significant memory and performance improvements for graph traversals
+- 203 tests, 0 failures — 82.9% line coverage
 
 ## Documentation
 

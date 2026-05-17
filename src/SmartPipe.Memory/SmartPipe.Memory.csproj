@@ -36,7 +36,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
-    <PackageReference Include="SmartPipe.Core" Version="1.0.5" />
+    <PackageReference Include="SmartPipe.Core" Version="1.0.6" />
     <!-- Source Link for GitHub -->
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>

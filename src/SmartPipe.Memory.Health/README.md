@@ -92,8 +92,9 @@ Console.WriteLine("Agent stopped.");
 
 ## Dependencies
 
-- SmartPipe.Memory (>= 0.1.2)
-- SmartPipe.Core (>= 1.0.5)
+- SmartPipe.Memory (>= 0.1.3)
+- SmartPipe.Core (>= 1.0.6)
 
 ## License
+
 MIT

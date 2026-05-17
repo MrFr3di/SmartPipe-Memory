@@ -315,13 +315,17 @@ DefaultDatabaseName = "memory.db"
 DegradedHealthThreshold = 0.7
 WeakenedEdgeThreshold = 0.3
 
-### PaddedCounter 
+### PaddedCounter
 
 `PaddedCounter64` and `PaddedCounter32` are atomic counters padded to 64 bytes (one CPU cache line) to eliminate false sharing in parallel code paths. Used in `MemoryMetrics` for accurate performance tracking.
 
 ### WAL Checkpoint
 
 `SqliteWALStore` now runs a background timer that periodically executes `PRAGMA wal_checkpoint(TRUNCATE)`. This keeps the write‑ahead log file compact and prevents unbounded growth during intensive write workloads.
+
+### FastBitArray
+
+`FastBitArray` (in `Infrastructure/`) is a high‑performance bit array backed by `ulong[]`. It is used in `GraphTraversalEngine` to track visited nodes during BFS, replacing `HashSet<string>` and significantly reducing memory allocations and cache misses.
 
 ## Integration with SmartPipe.Core
 
