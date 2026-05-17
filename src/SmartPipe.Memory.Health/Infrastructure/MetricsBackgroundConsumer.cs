@@ -1,6 +1,6 @@
+using System.Threading.Channels;
 using SmartPipe.Memory.Health.Analysis;
 using SmartPipe.Memory.Storage;
-using System.Threading.Channels;
 
 namespace SmartPipe.Memory.Health.Infrastructure;
 
@@ -24,7 +24,8 @@ public sealed class MetricsBackgroundConsumer : IAsyncDisposable
     public MetricsBackgroundConsumer(
         ChannelReader<MetricsEntry> reader,
         IGraphStore store,
-        HealthVectorCalculator calculator)
+        HealthVectorCalculator calculator
+    )
     {
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -64,11 +65,13 @@ public sealed class MetricsBackgroundConsumer : IAsyncDisposable
             var health = await _calculator.ComputeAsync(
                 entry.NodeId,
                 history[entry.NodeId],
-                ct: ct);
+                ct: ct
+            );
 
             // Get current version for optimistic concurrency
             var node = await _store.GetNodeAsync(entry.NodeId, ct);
-            if (node is null) continue;
+            if (node is null)
+                continue;
 
             await _store.UpdateNodeHealthAsync(
                 entry.NodeId,
@@ -77,7 +80,8 @@ public sealed class MetricsBackgroundConsumer : IAsyncDisposable
                 health.PredictedLatencyMs,
                 health.ResourceStrain,
                 node.Version,
-                ct);
+                ct
+            );
         }
     }
 

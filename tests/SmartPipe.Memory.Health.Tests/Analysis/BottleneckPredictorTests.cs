@@ -15,7 +15,13 @@ public sealed class BottleneckPredictorTests : IAsyncDisposable
         _store = new InMemoryGraphStore();
         var clock = new TimeProviderClock();
         _calculator = new HealthVectorCalculator(_store, clock);
-        _predictor = new BottleneckPredictor(_calculator, _store, latencyThresholdMs: 500, healthScoreThreshold: 0.3, clock);
+        _predictor = new BottleneckPredictor(
+            _calculator,
+            _store,
+            latencyThresholdMs: 500,
+            healthScoreThreshold: 0.3,
+            clock
+        );
     }
 
     [Fact]
@@ -25,14 +31,24 @@ public sealed class BottleneckPredictorTests : IAsyncDisposable
         {
             NodeId = "n1",
             Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 }
+            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 },
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow.AddSeconds(-10),
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 },
+            },
         };
 
-        var prediction = await _predictor.PredictAsync("n1", current, historical, historical[0].Timestamp);
+        var prediction = await _predictor.PredictAsync(
+            "n1",
+            current,
+            historical,
+            historical[0].Timestamp
+        );
 
         Assert.False(prediction.IsBottleneck);
     }
@@ -44,14 +60,24 @@ public sealed class BottleneckPredictorTests : IAsyncDisposable
         {
             NodeId = "n1",
             Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 600 }
+            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 600 },
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow.AddSeconds(-10),
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 },
+            },
         };
 
-        var prediction = await _predictor.PredictAsync("n1", current, historical, historical[0].Timestamp);
+        var prediction = await _predictor.PredictAsync(
+            "n1",
+            current,
+            historical,
+            historical[0].Timestamp
+        );
 
         Assert.True(prediction.IsBottleneck);
     }
@@ -63,14 +89,28 @@ public sealed class BottleneckPredictorTests : IAsyncDisposable
         {
             NodeId = "n1",
             Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 600, ["ItemsFailed"] = 10 }
+            Values = new Dictionary<string, double>
+            {
+                ["AvgLatencyMs"] = 600,
+                ["ItemsFailed"] = 10,
+            },
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow.AddSeconds(-10),
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 },
+            },
         };
 
-        var prediction = await _predictor.PredictAsync("n1", current, historical, historical[0].Timestamp);
+        var prediction = await _predictor.PredictAsync(
+            "n1",
+            current,
+            historical,
+            historical[0].Timestamp
+        );
 
         Assert.True(prediction.IsBottleneck);
     }
@@ -82,14 +122,24 @@ public sealed class BottleneckPredictorTests : IAsyncDisposable
         {
             NodeId = "n1",
             Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 }
+            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 },
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow.AddSeconds(-10),
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 },
+            },
         };
 
-        var prediction = await _predictor.PredictAsync("n1", current, historical, historical[0].Timestamp);
+        var prediction = await _predictor.PredictAsync(
+            "n1",
+            current,
+            historical,
+            historical[0].Timestamp
+        );
 
         Assert.True(double.IsPositiveInfinity(prediction.TimeToImpactMs));
     }

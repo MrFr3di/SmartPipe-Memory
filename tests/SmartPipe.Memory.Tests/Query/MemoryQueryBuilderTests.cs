@@ -40,11 +40,30 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     [Fact]
     public async Task Where_HealthScore_BelowThreshold()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.9 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.3 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.9,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.3,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder.Nodes("File").Where("HealthScore", FilterOperator.LessThan, 0.5).ExecuteAsync())
+        await foreach (
+            var r in _builder
+                .Nodes("File")
+                .Where("HealthScore", FilterOperator.LessThan, 0.5)
+                .ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Single(results);
@@ -56,16 +75,34 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     [Fact]
     public async Task And_TwoFilters_BothApply()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.9, FailureProbability = 0.05 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.3, FailureProbability = 0.2 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.9,
+                FailureProbability = 0.05,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.3,
+                FailureProbability = 0.2,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder
-            .Nodes("File")
-            .Where("HealthScore", FilterOperator.LessThan, 0.5)
-            .And()
-            .Where("FailureProb", FilterOperator.GreaterThan, 0.1)
-            .ExecuteAsync())
+        await foreach (
+            var r in _builder
+                .Nodes("File")
+                .Where("HealthScore", FilterOperator.LessThan, 0.5)
+                .And()
+                .Where("FailureProb", FilterOperator.GreaterThan, 0.1)
+                .ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Single(results);
@@ -75,16 +112,32 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     [Fact]
     public async Task Or_TwoFilters_EitherApplies()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.9 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.3 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.9,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.3,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder
-            .Nodes("File")
-            .Where("HealthScore", FilterOperator.LessThan, 0.35)
-            .Or()
-            .Where("HealthScore", FilterOperator.GreaterThan, 0.8)
-            .ExecuteAsync())
+        await foreach (
+            var r in _builder
+                .Nodes("File")
+                .Where("HealthScore", FilterOperator.LessThan, 0.35)
+                .Or()
+                .Where("HealthScore", FilterOperator.GreaterThan, 0.8)
+                .ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Equal(2, results.Count);
@@ -93,18 +146,44 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     [Fact]
     public async Task Or_OnlyAffectsNextWhere()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.9, FailureProbability = 0.05 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.3, FailureProbability = 0.05 });
-        await _store.UpsertNodeAsync(new Node { Id = "n3", Type = "File", HealthScore = 0.9, FailureProbability = 0.2 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.9,
+                FailureProbability = 0.05,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.3,
+                FailureProbability = 0.05,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n3",
+                Type = "File",
+                HealthScore = 0.9,
+                FailureProbability = 0.2,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder
-            .Nodes("File")
-            .Where("HealthScore", FilterOperator.LessThan, 0.5)
-            .Or()
-            .Where("HealthScore", FilterOperator.GreaterThan, 0.8)
-            .Where("FailureProb", FilterOperator.GreaterThan, 0.1)
-            .ExecuteAsync())
+        await foreach (
+            var r in _builder
+                .Nodes("File")
+                .Where("HealthScore", FilterOperator.LessThan, 0.5)
+                .Or()
+                .Where("HealthScore", FilterOperator.GreaterThan, 0.8)
+                .Where("FailureProb", FilterOperator.GreaterThan, 0.1)
+                .ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Single(results);
@@ -118,7 +197,14 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     {
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         var results = new List<QueryResult>();
         await foreach (var r in _builder.ShortestPath("A", "B", "DerivedFrom").ExecuteAsync())
@@ -136,7 +222,14 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     {
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         var results = new List<QueryResult>();
         await foreach (var r in _builder.StartFrom("A").Traverse("DerivedFrom", 3).ExecuteAsync())
@@ -163,8 +256,22 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     [Fact]
     public async Task OrderBy_HealthScore_SortsCorrectly()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.3 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.9 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.3,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.9,
+            }
+        );
 
         var results = new List<QueryResult>();
         await foreach (var r in _builder.Nodes("File").OrderBy("HealthScore").ExecuteAsync())
@@ -181,11 +288,27 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
         var past = DateTime.UtcNow.AddDays(-30);
         var recent = DateTime.UtcNow.AddDays(-1);
 
-        await _store.UpsertNodeAsync(new Node { Id = "old", Type = "File", ValidFrom = past });
-        await _store.UpsertNodeAsync(new Node { Id = "new", Type = "File", ValidFrom = recent });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "old",
+                Type = "File",
+                ValidFrom = past,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "new",
+                Type = "File",
+                ValidFrom = recent,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder.Nodes("File").AsOf(DateTime.UtcNow.AddDays(-7)).ExecuteAsync())
+        await foreach (
+            var r in _builder.Nodes("File").AsOf(DateTime.UtcNow.AddDays(-7)).ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Single(results);
@@ -195,10 +318,22 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     [Fact]
     public async Task Between_TimeRange_NotYetImplemented()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", ValidFrom = DateTime.UtcNow.AddDays(-5) });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                ValidFrom = DateTime.UtcNow.AddDays(-5),
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder.Nodes("File").Between(DateTime.UtcNow.AddDays(-10), DateTime.UtcNow).ExecuteAsync())
+        await foreach (
+            var r in _builder
+                .Nodes("File")
+                .Between(DateTime.UtcNow.AddDays(-10), DateTime.UtcNow)
+                .ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Single(results);
@@ -209,16 +344,39 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     [Fact]
     public async Task WhereNode_FiltersDuringTraversal()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File", HealthScore = 1.0 });
-        await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File", HealthScore = 0.02 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "A",
+                Type = "File",
+                HealthScore = 1.0,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "B",
+                Type = "File",
+                HealthScore = 0.02,
+            }
+        );
 
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder
-            .ShortestPath("A", "B", "DerivedFrom")
-            .WhereNode(node => node.HealthScore > 0.1)
-            .ExecuteAsync())
+        await foreach (
+            var r in _builder
+                .ShortestPath("A", "B", "DerivedFrom")
+                .WhereNode(node => node.HealthScore > 0.1)
+                .ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Empty(results);
@@ -231,10 +389,20 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     {
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom, Weight = 0.2 });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+                Weight = 0.2,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder.ShortestPath("A", "B", "DerivedFrom").MinWeight(0.5).ExecuteAsync())
+        await foreach (
+            var r in _builder.ShortestPath("A", "B", "DerivedFrom").MinWeight(0.5).ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Empty(results);
@@ -245,10 +413,23 @@ public sealed class MemoryQueryBuilderTests : IAsyncDisposable
     {
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom, Confidence = 0.3 });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+                Confidence = 0.3,
+            }
+        );
 
         var results = new List<QueryResult>();
-        await foreach (var r in _builder.ShortestPath("A", "B", "DerivedFrom").MinConfidence(0.9).ExecuteAsync())
+        await foreach (
+            var r in _builder
+                .ShortestPath("A", "B", "DerivedFrom")
+                .MinConfidence(0.9)
+                .ExecuteAsync()
+        )
             results.Add(r);
 
         Assert.Empty(results);

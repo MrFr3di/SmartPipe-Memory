@@ -24,7 +24,8 @@ internal static class GraphTraversalEngine
         Func<Node, bool>? nodeFilter,
         double? minWeight,
         double? minConfidence,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         if (!nodes.ContainsKey(fromNodeId) || !nodes.ContainsKey(toNodeId))
             return Array.Empty<PathSegment>();
@@ -92,7 +93,8 @@ internal static class GraphTraversalEngine
         Func<Node, bool>? nodeFilter,
         double? minWeight,
         double? minConfidence,
-        [EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         if (!nodes.TryGetValue(startNodeId, out var startNode))
             yield break;
@@ -150,18 +152,33 @@ internal static class GraphTraversalEngine
     private static List<PathSegment> ReconstructPath(
         Dictionary<string, (string NodeId, string EdgeType, double Weight)> parent,
         string fromNodeId,
-        string toNodeId)
+        string toNodeId
+    )
     {
         var path = new List<PathSegment>();
         var current = toNodeId;
 
         while (current != fromNodeId && parent.TryGetValue(current, out var p))
         {
-            path.Add(new PathSegment { NodeId = current, EdgeType = p.EdgeType, Weight = p.Weight });
+            path.Add(
+                new PathSegment
+                {
+                    NodeId = current,
+                    EdgeType = p.EdgeType,
+                    Weight = p.Weight,
+                }
+            );
             current = p.NodeId;
         }
 
-        path.Add(new PathSegment { NodeId = fromNodeId, EdgeType = string.Empty, Weight = 0.0 });
+        path.Add(
+            new PathSegment
+            {
+                NodeId = fromNodeId,
+                EdgeType = string.Empty,
+                Weight = 0.0,
+            }
+        );
         path.Reverse();
         return path;
     }

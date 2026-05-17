@@ -16,7 +16,8 @@ public sealed class ClosenessCentrality
     public IReadOnlyDictionary<string, double> Compute(
         IReadOnlyDictionary<string, Graph.Node> nodes,
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> outEdges,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -54,7 +55,8 @@ public sealed class ClosenessCentrality
         IReadOnlyDictionary<string, Graph.Node> nodes,
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> outEdges,
         IEnumerable<string> subsetIds,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -87,7 +89,8 @@ public sealed class ClosenessCentrality
         IReadOnlyDictionary<string, Graph.Node> nodes,
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> outEdges,
         string sourceId,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var distances = new Dictionary<string, int>();
         var queue = new Queue<string>();

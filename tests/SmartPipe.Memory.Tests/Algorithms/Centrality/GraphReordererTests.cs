@@ -11,14 +11,29 @@ public sealed class GraphReordererTests
         var reorderer = new GraphReorderer();
         var nodes = new List<Node>
         {
-            new Node { Id = "A", Type = "File", HealthScore = 0.5 },
-            new Node { Id = "B", Type = "File", HealthScore = 0.9 },
-            new Node { Id = "C", Type = "File", HealthScore = 0.3 }
+            new Node
+            {
+                Id = "A",
+                Type = "File",
+                HealthScore = 0.5,
+            },
+            new Node
+            {
+                Id = "B",
+                Type = "File",
+                HealthScore = 0.9,
+            },
+            new Node
+            {
+                Id = "C",
+                Type = "File",
+                HealthScore = 0.3,
+            },
         };
         var clusters = new List<Cluster>
         {
             new Cluster { Id = "1", NodeIds = new[] { "A", "C" } },
-            new Cluster { Id = "2", NodeIds = new[] { "B" } }
+            new Cluster { Id = "2", NodeIds = new[] { "B" } },
         };
 
         var result = reorderer.ReorderByCommunity(nodes, clusters);
@@ -37,16 +52,26 @@ public sealed class GraphReordererTests
         {
             new Node { Id = "A", Type = "File" },
             new Node { Id = "B", Type = "File" },
-            new Node { Id = "C", Type = "File" }
+            new Node { Id = "C", Type = "File" },
         };
         // Use IReadOnlyDictionary<string, IReadOnlyList<Edge>> to match signature
         var edges = new Dictionary<string, IReadOnlyList<Edge>>
         {
             ["B"] = new List<Edge>
             {
-                new Edge { FromNodeId = "B", ToNodeId = "A", Type = EdgeType.DerivedFrom },
-                new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom }
-            }
+                new Edge
+                {
+                    FromNodeId = "B",
+                    ToNodeId = "A",
+                    Type = EdgeType.DerivedFrom,
+                },
+                new Edge
+                {
+                    FromNodeId = "B",
+                    ToNodeId = "C",
+                    Type = EdgeType.DerivedFrom,
+                },
+            },
         };
 
         var result = reorderer.ReorderByDegree(nodes, edges);
@@ -60,8 +85,18 @@ public sealed class GraphReordererTests
         var reorderer = new GraphReorderer();
         var nodes = new List<Node>
         {
-            new Node { Id = "A", Type = "File", HealthScore = 0.3 },
-            new Node { Id = "B", Type = "File", HealthScore = 0.9 }
+            new Node
+            {
+                Id = "A",
+                Type = "File",
+                HealthScore = 0.3,
+            },
+            new Node
+            {
+                Id = "B",
+                Type = "File",
+                HealthScore = 0.9,
+            },
         };
 
         var result = reorderer.ReorderByAccessibility(nodes);

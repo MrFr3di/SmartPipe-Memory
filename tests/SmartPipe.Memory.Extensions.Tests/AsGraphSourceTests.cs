@@ -61,9 +61,7 @@ public sealed class AsGraphSourceTests : IAsyncDisposable
             await foreach (var ctx in source.ReadAsync(cts.Token))
                 count++;
         }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) { }
 
         Assert.True(count < 100_000);
     }

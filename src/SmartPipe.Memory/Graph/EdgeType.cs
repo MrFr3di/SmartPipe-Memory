@@ -21,5 +21,5 @@ public enum EdgeType
     FilteredFrom,
 
     /// <summary>Pipeline component feeds into another component.</summary>
-    FeedsInto
+    FeedsInto,
 }

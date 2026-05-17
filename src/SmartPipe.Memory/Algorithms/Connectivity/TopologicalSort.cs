@@ -32,7 +32,8 @@ public static class TopologicalSort
     /// <returns>The result containing sorted nodes and cycle information.</returns>
     public static Result KahnSort(
         IReadOnlyDictionary<string, Node> nodes,
-        IReadOnlyDictionary<string, IReadOnlyList<Edge>> outEdges)
+        IReadOnlyDictionary<string, IReadOnlyList<Edge>> outEdges
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -83,7 +84,7 @@ public static class TopologicalSort
         {
             Sorted = sorted,
             HasCycles = hasCycles,
-            CyclicNodes = cyclicNodes
+            CyclicNodes = cyclicNodes,
         };
     }
 }

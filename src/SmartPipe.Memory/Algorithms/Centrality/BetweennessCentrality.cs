@@ -18,7 +18,8 @@ public sealed class BetweennessCentrality
     public IReadOnlyDictionary<string, double> Compute(
         IReadOnlyDictionary<string, Graph.Node> nodes,
         ConcurrentDictionary<string, List<Graph.Edge>> outEdges,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -41,7 +42,8 @@ public sealed class BetweennessCentrality
         ConcurrentDictionary<string, List<Graph.Edge>> outEdges,
         string sourceId,
         Dictionary<string, double> betweenness,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var predecessors = new Dictionary<string, List<string>>();
         var distances = new Dictionary<string, int>();
@@ -95,7 +97,8 @@ public sealed class BetweennessCentrality
             var current = stack.Pop();
             foreach (var predecessor in predecessors[current])
             {
-                var contribution = (double)sigma[predecessor] / sigma[current] * (1.0 + delta[current]);
+                var contribution =
+                    (double)sigma[predecessor] / sigma[current] * (1.0 + delta[current]);
                 delta[predecessor] += contribution;
             }
 
@@ -116,7 +119,8 @@ public sealed class BetweennessCentrality
         IReadOnlyDictionary<string, Graph.Node> nodes,
         ConcurrentDictionary<string, List<Graph.Edge>> outEdges,
         IEnumerable<string> subsetIds,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);

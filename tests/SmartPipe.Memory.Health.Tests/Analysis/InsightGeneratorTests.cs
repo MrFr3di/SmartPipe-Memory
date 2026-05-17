@@ -31,7 +31,7 @@ public sealed class InsightGeneratorTests : IAsyncDisposable
             Confidence = 0.9,
             TimeToImpactMs = 5000,
             HealthDelta = 0.2,
-            LatencyDelta = 100
+            LatencyDelta = 100,
         };
 
         var insight = await _generator.GenerateFromPredictionAsync(prediction);
@@ -49,11 +49,16 @@ public sealed class InsightGeneratorTests : IAsyncDisposable
         {
             NodeId = "n1",
             Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 600 }
+            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 600 },
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow.AddSeconds(-10),
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 },
+            },
         };
 
         var insight = await _generator.AnalyzeNodeAsync("n1", current, historical);
@@ -68,11 +73,16 @@ public sealed class InsightGeneratorTests : IAsyncDisposable
         {
             NodeId = "n1",
             Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 }
+            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 },
         };
         var historical = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow.AddSeconds(-10), Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow.AddSeconds(-10),
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 90 },
+            },
         };
 
         var insight = await _generator.AnalyzeNodeAsync("n1", current, historical);
@@ -92,7 +102,12 @@ public sealed class InsightGeneratorTests : IAsyncDisposable
     [Fact]
     public async Task GenerateClusterDiscoveredAsync_CreatesInsight()
     {
-        var cluster = new Cluster { Id = "1", NodeIds = new[] { "A", "B", "C" }, Modularity = 0.8 };
+        var cluster = new Cluster
+        {
+            Id = "1",
+            NodeIds = new[] { "A", "B", "C" },
+            Modularity = 0.8,
+        };
 
         var insight = await _generator.GenerateClusterDiscoveredAsync(cluster);
 

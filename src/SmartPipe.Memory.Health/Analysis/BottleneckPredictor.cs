@@ -37,7 +37,8 @@ public sealed class BottleneckPredictor
         IGraphStore store,
         double latencyThresholdMs = 500,
         double healthScoreThreshold = 0.3,
-        IClock? clock = null)
+        IClock? clock = null
+    )
     {
         _calculator = calculator ?? throw new ArgumentNullException(nameof(calculator));
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -61,21 +62,31 @@ public sealed class BottleneckPredictor
         MetricsEntry currentMetrics,
         IReadOnlyList<MetricsEntry> historicalMetrics,
         DateTime historicalTimestamp,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentException.ThrowIfNullOrEmpty(nodeId);
 
-        var currentHealth = await _calculator.ComputeFromSnapshotAsync(nodeId, currentMetrics, ct: ct);
+        var currentHealth = await _calculator.ComputeFromSnapshotAsync(
+            nodeId,
+            currentMetrics,
+            ct: ct
+        );
         var historicalHealth = await _calculator.ComputeAsync(nodeId, historicalMetrics, ct: ct);
 
         var healthDelta = historicalHealth.HealthScore - currentHealth.HealthScore;
         var latencyDelta = currentHealth.PredictedLatencyMs - historicalHealth.PredictedLatencyMs;
 
-        var isBottleneck = currentHealth.PredictedLatencyMs > LatencyThresholdMs
+        var isBottleneck =
+            currentHealth.PredictedLatencyMs > LatencyThresholdMs
             || currentHealth.HealthScore < HealthScoreThreshold;
 
         var confidence = ComputeConfidence(healthDelta, latencyDelta, currentHealth);
-        var timeToImpact = ComputeTimeToImpact(currentHealth, historicalHealth, historicalTimestamp);
+        var timeToImpact = ComputeTimeToImpact(
+            currentHealth,
+            historicalHealth,
+            historicalTimestamp
+        );
 
         return new BottleneckPrediction
         {
@@ -86,14 +97,15 @@ public sealed class BottleneckPredictor
             CurrentHealth = currentHealth,
             HistoricalHealth = historicalHealth,
             HealthDelta = healthDelta,
-            LatencyDelta = latencyDelta
+            LatencyDelta = latencyDelta,
         };
     }
 
     private static double ComputeConfidence(
         double healthDelta,
         double latencyDelta,
-        HealthVector currentHealth)
+        HealthVector currentHealth
+    )
     {
         // Higher confidence if health is degrading AND latency is increasing
         var healthFactor = Math.Max(0, healthDelta);
@@ -103,7 +115,11 @@ public sealed class BottleneckPredictor
         return Math.Min(healthFactor * 0.4 + latencyFactor * 0.3 + failureFactor * 0.3, 1.0);
     }
 
-    private double ComputeTimeToImpact(HealthVector current, HealthVector historical, DateTime historicalTimestamp)
+    private double ComputeTimeToImpact(
+        HealthVector current,
+        HealthVector historical,
+        DateTime historicalTimestamp
+    )
     {
         if (current.PredictedLatencyMs <= historical.PredictedLatencyMs)
             return double.PositiveInfinity;
@@ -112,7 +128,8 @@ public sealed class BottleneckPredictor
         if (timeDeltaSeconds <= 0)
             return double.PositiveInfinity;
 
-        var latencyVelocity = (current.PredictedLatencyMs - historical.PredictedLatencyMs) / timeDeltaSeconds;
+        var latencyVelocity =
+            (current.PredictedLatencyMs - historical.PredictedLatencyMs) / timeDeltaSeconds;
         if (latencyVelocity <= 0)
             return double.PositiveInfinity;
 

@@ -38,7 +38,6 @@ public sealed record MemoryQuery
     /// <summary>Type of query to execute.</summary>
     public QueryType Type { get; init; }
 
-
     /// <summary>
     /// Time-travel: return the graph state as it was at this point in time.
     /// Filters nodes and edges by <c>ValidFrom &lt;= AsOf AND (ValidTo IS NULL OR ValidTo &gt; AsOf)</c>.
@@ -92,5 +91,5 @@ public enum QueryType
     Traverse,
 
     /// <summary>Find generated insights.</summary>
-    FindInsights
+    FindInsights,
 }

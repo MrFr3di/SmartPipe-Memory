@@ -33,14 +33,18 @@ public sealed class AutoClassifier
         ArgumentNullException.ThrowIfNull(from);
         ArgumentNullException.ThrowIfNull(to);
 
-        if (from.Properties.TryGetValue("hash", out var fromHash) &&
-            to.Properties.TryGetValue("hash", out var toHash) &&
-            fromHash.Equals(toHash))
+        if (
+            from.Properties.TryGetValue("hash", out var fromHash)
+            && to.Properties.TryGetValue("hash", out var toHash)
+            && fromHash.Equals(toHash)
+        )
             return Graph.EdgeType.DuplicateOf;
 
-        if (from.Properties.TryGetValue("path", out var fromPath) &&
-            to.Properties.TryGetValue("path", out var toPath) &&
-            AreVersions(fromPath?.ToString() ?? "", toPath?.ToString() ?? ""))
+        if (
+            from.Properties.TryGetValue("path", out var fromPath)
+            && to.Properties.TryGetValue("path", out var toPath)
+            && AreVersions(fromPath?.ToString() ?? "", toPath?.ToString() ?? "")
+        )
             return Graph.EdgeType.VersionOf;
 
         return Graph.EdgeType.DerivedFrom;

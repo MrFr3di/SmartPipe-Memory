@@ -73,7 +73,7 @@ await foreach (var r in query.ShortestPath("f1", "f2", "DuplicateOf").ExecuteAsy
 
 ## Dependencies
 
-- SmartPipe.Core >= 1.0.5
+- SmartPipe.Core >= 1.0.6
 - Microsoft.Data.Sqlite >= 9.0.0
 
 ## License

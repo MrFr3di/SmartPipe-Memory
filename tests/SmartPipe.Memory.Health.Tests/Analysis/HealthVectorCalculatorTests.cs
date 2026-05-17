@@ -37,8 +37,8 @@ public sealed class HealthVectorCalculatorTests : IAsyncDisposable
             {
                 ["AvgLatencyMs"] = 100,
                 ["SmoothThroughput"] = 50,
-                ["ItemsFailed"] = 0
-            }
+                ["ItemsFailed"] = 0,
+            },
         };
 
         var health = await _calculator.ComputeAsync("n1", new[] { snapshot }, 3);
@@ -54,9 +54,24 @@ public sealed class HealthVectorCalculatorTests : IAsyncDisposable
     {
         var snapshots = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["ItemsFailed"] = 1 } },
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["ItemsFailed"] = 1 } },
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["ItemsFailed"] = 0 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["ItemsFailed"] = 1 },
+            },
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["ItemsFailed"] = 1 },
+            },
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["ItemsFailed"] = 0 },
+            },
         };
 
         var health = await _calculator.ComputeAsync("n1", snapshots, 3);
@@ -69,13 +84,21 @@ public sealed class HealthVectorCalculatorTests : IAsyncDisposable
     {
         await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "n1", ToNodeId = "n2", Type = EdgeType.DerivedFrom, Weight = 0.1 });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "n1",
+                ToNodeId = "n2",
+                Type = EdgeType.DerivedFrom,
+                Weight = 0.1,
+            }
+        );
 
         var snapshot = new MetricsEntry
         {
             NodeId = "n1",
             Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 }
+            Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 },
         };
 
         var health = await _calculator.ComputeAsync("n1", new[] { snapshot }, 3);
@@ -88,11 +111,36 @@ public sealed class HealthVectorCalculatorTests : IAsyncDisposable
     {
         var snapshots = new[]
         {
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 10 } },
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 20 } },
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 30 } },
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 40 } },
-            new MetricsEntry { NodeId = "n1", Timestamp = DateTime.UtcNow, Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 50 } }
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 10 },
+            },
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 20 },
+            },
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 30 },
+            },
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 40 },
+            },
+            new MetricsEntry
+            {
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 50 },
+            },
         };
 
         var health = await _calculator.ComputeAsync("n1", snapshots, 3);

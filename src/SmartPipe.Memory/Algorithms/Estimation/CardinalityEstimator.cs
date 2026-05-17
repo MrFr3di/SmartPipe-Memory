@@ -40,7 +40,8 @@ public sealed class CardinalityEstimator
     /// </summary>
     public double EstimateNeighbors(
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
-        string nodeId)
+        string nodeId
+    )
     {
         ArgumentNullException.ThrowIfNull(edges);
         ArgumentException.ThrowIfNullOrEmpty(nodeId);

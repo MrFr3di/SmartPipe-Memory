@@ -18,7 +18,12 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     [Fact]
     public async Task UpsertNode_NewNode_StoresIt()
     {
-        var node = new Node { Id = "n1", Type = "File", Label = "test.txt" };
+        var node = new Node
+        {
+            Id = "n1",
+            Type = "File",
+            Label = "test.txt",
+        };
         var result = await _store.UpsertNodeAsync(node);
 
         Assert.Equal("n1", result.Id);
@@ -30,8 +35,22 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     [Fact]
     public async Task UpsertNode_ExistingNode_UpdatesIt()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", Label = "old.txt" });
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", Label = "new.txt" });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                Label = "old.txt",
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                Label = "new.txt",
+            }
+        );
 
         var result = await _store.GetNodeAsync("n1");
         Assert.Equal("new.txt", result!.Label);
@@ -51,7 +70,12 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File" });
 
-        var edge = new Edge { FromNodeId = "n1", ToNodeId = "n2", Type = EdgeType.DuplicateOf };
+        var edge = new Edge
+        {
+            FromNodeId = "n1",
+            ToNodeId = "n2",
+            Type = EdgeType.DuplicateOf,
+        };
         var result = await _store.UpsertEdgeAsync(edge);
 
         Assert.Equal("n1", result.FromNodeId);
@@ -82,14 +106,33 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     [Fact]
     public async Task QueryNodes_ByHealthScore_FiltersCorrectly()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.9 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.3 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.9,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.3,
+            }
+        );
 
         var query = new MemoryQuery
         {
             NodeType = "File",
-            Filter = new FilterNode.PropertyFilter { Property = "HealthScore", Operator = FilterOperator.LessThan, Value = 0.5 },
-            Type = QueryType.FindNodes
+            Filter = new FilterNode.PropertyFilter
+            {
+                Property = "HealthScore",
+                Operator = FilterOperator.LessThan,
+                Value = 0.5,
+            },
+            Type = QueryType.FindNodes,
         };
 
         var results = new List<Node>();
@@ -105,16 +148,55 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     [Fact]
     public async Task QueryNodes_AndFilter_CombinesCorrectly()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.9, FailureProbability = 0.05 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.3, FailureProbability = 0.2 });
-        await _store.UpsertNodeAsync(new Node { Id = "n3", Type = "File", HealthScore = 0.4, FailureProbability = 0.05 });
-
-        var filter = new FilterNode.And(
-            new FilterNode.PropertyFilter { Property = "HealthScore", Operator = FilterOperator.LessThan, Value = 0.5 },
-            new FilterNode.PropertyFilter { Property = "FailureProb", Operator = FilterOperator.GreaterThan, Value = 0.1 }
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.9,
+                FailureProbability = 0.05,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.3,
+                FailureProbability = 0.2,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n3",
+                Type = "File",
+                HealthScore = 0.4,
+                FailureProbability = 0.05,
+            }
         );
 
-        var query = new MemoryQuery { NodeType = "File", Filter = filter, Type = QueryType.FindNodes };
+        var filter = new FilterNode.And(
+            new FilterNode.PropertyFilter
+            {
+                Property = "HealthScore",
+                Operator = FilterOperator.LessThan,
+                Value = 0.5,
+            },
+            new FilterNode.PropertyFilter
+            {
+                Property = "FailureProb",
+                Operator = FilterOperator.GreaterThan,
+                Value = 0.1,
+            }
+        );
+
+        var query = new MemoryQuery
+        {
+            NodeType = "File",
+            Filter = filter,
+            Type = QueryType.FindNodes,
+        };
         var results = new List<Node>();
         await foreach (var node in _store.QueryNodesAsync(query))
             results.Add(node);
@@ -128,16 +210,52 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     [Fact]
     public async Task QueryNodes_OrFilter_CombinesCorrectly()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.9 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.3 });
-        await _store.UpsertNodeAsync(new Node { Id = "n3", Type = "File", HealthScore = 0.4 });
-
-        var filter = new FilterNode.Or(
-            new FilterNode.PropertyFilter { Property = "HealthScore", Operator = FilterOperator.LessThan, Value = 0.35 },
-            new FilterNode.PropertyFilter { Property = "HealthScore", Operator = FilterOperator.GreaterThan, Value = 0.8 }
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.9,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.3,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n3",
+                Type = "File",
+                HealthScore = 0.4,
+            }
         );
 
-        var query = new MemoryQuery { NodeType = "File", Filter = filter, Type = QueryType.FindNodes };
+        var filter = new FilterNode.Or(
+            new FilterNode.PropertyFilter
+            {
+                Property = "HealthScore",
+                Operator = FilterOperator.LessThan,
+                Value = 0.35,
+            },
+            new FilterNode.PropertyFilter
+            {
+                Property = "HealthScore",
+                Operator = FilterOperator.GreaterThan,
+                Value = 0.8,
+            }
+        );
+
+        var query = new MemoryQuery
+        {
+            NodeType = "File",
+            Filter = filter,
+            Type = QueryType.FindNodes,
+        };
         var results = new List<Node>();
         await foreach (var node in _store.QueryNodesAsync(query))
             results.Add(node);
@@ -155,10 +273,29 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
         var past = DateTime.UtcNow.AddDays(-30);
         var recent = DateTime.UtcNow.AddDays(-1);
 
-        await _store.UpsertNodeAsync(new Node { Id = "old", Type = "File", ValidFrom = past });
-        await _store.UpsertNodeAsync(new Node { Id = "new", Type = "File", ValidFrom = recent });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "old",
+                Type = "File",
+                ValidFrom = past,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "new",
+                Type = "File",
+                ValidFrom = recent,
+            }
+        );
 
-        var query = new MemoryQuery { NodeType = "File", AsOf = DateTime.UtcNow.AddDays(-7), Type = QueryType.FindNodes };
+        var query = new MemoryQuery
+        {
+            NodeType = "File",
+            AsOf = DateTime.UtcNow.AddDays(-7),
+            Type = QueryType.FindNodes,
+        };
         var results = new List<Node>();
         await foreach (var node in _store.QueryNodesAsync(query))
             results.Add(node);
@@ -175,9 +312,22 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
         var past = DateTime.UtcNow.AddDays(-30);
         var expired = DateTime.UtcNow.AddDays(-5);
 
-        await _store.UpsertNodeAsync(new Node { Id = "expired", Type = "File", ValidFrom = past, ValidTo = expired });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "expired",
+                Type = "File",
+                ValidFrom = past,
+                ValidTo = expired,
+            }
+        );
 
-        var query = new MemoryQuery { NodeType = "File", AsOf = DateTime.UtcNow, Type = QueryType.FindNodes };
+        var query = new MemoryQuery
+        {
+            NodeType = "File",
+            AsOf = DateTime.UtcNow,
+            Type = QueryType.FindNodes,
+        };
         var results = new List<Node>();
         await foreach (var node in _store.QueryNodesAsync(query))
             results.Add(node);
@@ -191,7 +341,14 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     public async Task QueryNodesAsOfAsync_ReturnsCorrectState()
     {
         var past = DateTime.UtcNow.AddDays(-30);
-        await _store.UpsertNodeAsync(new Node { Id = "old", Type = "File", ValidFrom = past });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "old",
+                Type = "File",
+                ValidFrom = past,
+            }
+        );
 
         var query = new MemoryQuery { NodeType = "File", Type = QueryType.FindNodes };
         var results = new List<Node>();
@@ -208,9 +365,31 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     public async Task QueryEdgesAsOfAsync_ReturnsCorrectState()
     {
         var past = DateTime.UtcNow.AddDays(-30);
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", ValidFrom = past });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", ValidFrom = past });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "n1", ToNodeId = "n2", Type = EdgeType.DerivedFrom, ValidFrom = past });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                ValidFrom = past,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                ValidFrom = past,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "n1",
+                ToNodeId = "n2",
+                Type = EdgeType.DerivedFrom,
+                ValidFrom = past,
+            }
+        );
 
         var query = new MemoryQuery { EdgeType = "DerivedFrom", Type = QueryType.FindNodes };
         var results = new List<Edge>();
@@ -226,13 +405,40 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     public async Task FindPath_NodeFilter_BlocksUnhealthyNodes()
     {
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
-        await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File", HealthScore = 0.05 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "B",
+                Type = "File",
+                HealthScore = 0.05,
+            }
+        );
         await _store.UpsertNodeAsync(new Node { Id = "C", Type = "File" });
 
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "B",
+                ToNodeId = "C",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
-        var path = await _store.FindPathAsync("A", "C", "DerivedFrom", 10, node => node.HealthScore > 0.1);
+        var path = await _store.FindPathAsync(
+            "A",
+            "C",
+            "DerivedFrom",
+            10,
+            node => node.HealthScore > 0.1
+        );
 
         Assert.Empty(path);
     }
@@ -243,12 +449,34 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     public async Task Traverse_NodeFilter_SkipsFilteredNodes()
     {
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
-        await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File", HealthScore = 0.05 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "B",
+                Type = "File",
+                HealthScore = 0.05,
+            }
+        );
 
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         var results = new List<(Node Node, int Depth)>();
-        await foreach (var item in _store.TraverseAsync("A", "DerivedFrom", 10, 100, node => node.HealthScore > 0.1))
+        await foreach (
+            var item in _store.TraverseAsync(
+                "A",
+                "DerivedFrom",
+                10,
+                100,
+                node => node.HealthScore > 0.1
+            )
+        )
             results.Add(item);
 
         Assert.Single(results);
@@ -262,7 +490,8 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     {
         await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File" });
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _store.UpdateNodeHealthAsync("n1", 0.5, 0.3, 150.0, 0.7, 999));
+            _store.UpdateNodeHealthAsync("n1", 0.5, 0.3, 150.0, 0.7, 999)
+        );
     }
 
     // -- Ordering --
@@ -270,10 +499,30 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
     [Fact]
     public async Task QueryNodes_OrderBy_HealthScore_Ascending()
     {
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", HealthScore = 0.3 });
-        await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File", HealthScore = 0.9 });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.3,
+            }
+        );
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n2",
+                Type = "File",
+                HealthScore = 0.9,
+            }
+        );
 
-        var query = new MemoryQuery { NodeType = "File", OrderBy = "HealthScore", OrderDesc = false, Type = QueryType.FindNodes };
+        var query = new MemoryQuery
+        {
+            NodeType = "File",
+            OrderBy = "HealthScore",
+            OrderDesc = false,
+            Type = QueryType.FindNodes,
+        };
         var results = new List<Node>();
         await foreach (var node in _store.QueryNodesAsync(query))
             results.Add(node);
@@ -289,7 +538,12 @@ public sealed class InMemoryGraphStoreTests : IAsyncDisposable
         for (var i = 0; i < 100; i++)
             await _store.UpsertNodeAsync(new Node { Id = $"n{i}", Type = "File" });
 
-        var query = new MemoryQuery { NodeType = "File", Limit = 10, Type = QueryType.FindNodes };
+        var query = new MemoryQuery
+        {
+            NodeType = "File",
+            Limit = 10,
+            Type = QueryType.FindNodes,
+        };
         var results = new List<Node>();
         await foreach (var node in _store.QueryNodesAsync(query))
             results.Add(node);

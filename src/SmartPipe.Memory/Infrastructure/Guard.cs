@@ -15,7 +15,8 @@ internal static class Guard
     [return: NotNull]
     public static T NotNull<T>(
         [NotNull] this T? value,
-        [CallerArgumentExpression("value")] string? paramName = null)
+        [CallerArgumentExpression("value")] string? paramName = null
+    )
         where T : class
     {
         if (value is null)
@@ -29,7 +30,8 @@ internal static class Guard
     [return: NotNull]
     public static string NotNullOrEmpty(
         [NotNull] this string? value,
-        [CallerArgumentExpression("value")] string? paramName = null)
+        [CallerArgumentExpression("value")] string? paramName = null
+    )
     {
         if (string.IsNullOrEmpty(value))
             throw new ArgumentException("Value cannot be null or empty.", paramName);
@@ -41,7 +43,8 @@ internal static class Guard
     /// </summary>
     public static int Positive(
         int value,
-        [CallerArgumentExpression("value")] string? paramName = null)
+        [CallerArgumentExpression("value")] string? paramName = null
+    )
     {
         if (value <= 0)
             throw new ArgumentOutOfRangeException(paramName, value, "Value must be positive.");

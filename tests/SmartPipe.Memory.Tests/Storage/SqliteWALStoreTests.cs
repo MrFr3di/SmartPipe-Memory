@@ -27,7 +27,14 @@ public sealed class SqliteWALStoreTests : IAsyncDisposable
     {
         await _store.InitializeAsync();
 
-        await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File", Label = "test.txt" });
+        await _store.UpsertNodeAsync(
+            new Node
+            {
+                Id = "n1",
+                Type = "File",
+                Label = "test.txt",
+            }
+        );
 
         var node = await _store.GetNodeAsync("n1");
         Assert.NotNull(node);
@@ -56,8 +63,7 @@ public sealed class SqliteWALStoreTests : IAsyncDisposable
     {
         await _store.InitializeAsync();
 
-        var nodes = Enumerable.Range(0, 250).Select(i =>
-            new Node { Id = $"n{i}", Type = "File" });
+        var nodes = Enumerable.Range(0, 250).Select(i => new Node { Id = $"n{i}", Type = "File" });
 
         await _store.BatchUpsertNodesAsync(ToAsyncEnumerable(nodes));
 
@@ -73,12 +79,14 @@ public sealed class SqliteWALStoreTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "n1", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "n2", Type = "File" });
 
-        await _store.UpsertEdgeAsync(new Edge
-        {
-            FromNodeId = "n1",
-            ToNodeId = "n2",
-            Type = EdgeType.DuplicateOf
-        });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "n1",
+                ToNodeId = "n2",
+                Type = EdgeType.DuplicateOf,
+            }
+        );
 
         var path = await _store.FindPathAsync("n1", "n2", EdgeType.DuplicateOf.ToString(), 10);
         Assert.Equal(2, path.Count);

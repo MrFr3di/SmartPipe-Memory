@@ -30,7 +30,8 @@ public sealed class MemoryDecayPolicy
     public MemoryDecayPolicy(
         TimeSpan? halfLife = null,
         double minWeight = 0.1,
-        IClock? clock = null)
+        IClock? clock = null
+    )
     {
         HalfLife = halfLife ?? TimeSpan.FromDays(30);
         MinWeight = minWeight;
@@ -45,10 +46,7 @@ public sealed class MemoryDecayPolicy
     /// <param name="establishedAt">When the edge was established.</param>
     /// <param name="accessCount">Number of times the edge was accessed (slows decay).</param>
     /// <returns>Decayed weight.</returns>
-    public double ComputeStrength(
-        double initialWeight,
-        DateTime establishedAt,
-        int accessCount = 0)
+    public double ComputeStrength(double initialWeight, DateTime establishedAt, int accessCount = 0)
     {
         var age = _clock.UtcNow - establishedAt;
 

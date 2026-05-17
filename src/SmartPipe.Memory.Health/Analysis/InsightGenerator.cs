@@ -31,7 +31,8 @@ public sealed class InsightGenerator
     /// <returns>The generated insight.</returns>
     public async Task<Insight> GenerateFromPredictionAsync(
         BottleneckPrediction prediction,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(prediction);
 
@@ -43,17 +44,17 @@ public sealed class InsightGenerator
                 ? $"Bottleneck predicted for {prediction.NodeId}"
                 : $"Health degrading for {prediction.NodeId}",
             Description = prediction.IsBottleneck
-                ? $"Node {prediction.NodeId} is predicted to become a bottleneck. " +
-                  $"Current latency: {prediction.CurrentHealth?.PredictedLatencyMs:F1}ms. " +
-                  $"Health score: {prediction.CurrentHealth?.HealthScore:F2}. " +
-                  $"Estimated time to impact: {prediction.TimeToImpactMs:F0}ms."
-                : $"Node {prediction.NodeId} health is degrading. " +
-                  $"Health delta: {prediction.HealthDelta:F2}. " +
-                  $"Latency delta: {prediction.LatencyDelta:F1}ms.",
+                ? $"Node {prediction.NodeId} is predicted to become a bottleneck. "
+                    + $"Current latency: {prediction.CurrentHealth?.PredictedLatencyMs:F1}ms. "
+                    + $"Health score: {prediction.CurrentHealth?.HealthScore:F2}. "
+                    + $"Estimated time to impact: {prediction.TimeToImpactMs:F0}ms."
+                : $"Node {prediction.NodeId} health is degrading. "
+                    + $"Health delta: {prediction.HealthDelta:F2}. "
+                    + $"Latency delta: {prediction.LatencyDelta:F1}ms.",
             RelatedNodeIds = new[] { prediction.NodeId },
             Confidence = prediction.Confidence,
             Severity = prediction.IsBottleneck ? "Critical" : "Warning",
-            GeneratedAt = DateTime.UtcNow
+            GeneratedAt = DateTime.UtcNow,
         };
 
         await _store.InsertInsightAsync(insight, ct);
@@ -72,13 +73,19 @@ public sealed class InsightGenerator
         string nodeId,
         MetricsEntry currentMetrics,
         IReadOnlyList<MetricsEntry> historicalMetrics,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
-        var historicalTimestamp = historicalMetrics.Count > 0
-            ? historicalMetrics[^1].Timestamp
-            : DateTime.UtcNow;
+        var historicalTimestamp =
+            historicalMetrics.Count > 0 ? historicalMetrics[^1].Timestamp : DateTime.UtcNow;
 
-        var prediction = await _predictor.PredictAsync(nodeId, currentMetrics, historicalMetrics, historicalTimestamp, ct);
+        var prediction = await _predictor.PredictAsync(
+            nodeId,
+            currentMetrics,
+            historicalMetrics,
+            historicalTimestamp,
+            ct
+        );
 
         if (!prediction.IsBottleneck && prediction.HealthDelta <= 0.1)
             return null;
@@ -96,18 +103,20 @@ public sealed class InsightGenerator
     public async Task<Insight> GenerateRetryBudgetExhaustedAsync(
         string nodeId,
         int retryBudget,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var insight = new Insight
         {
             Id = $"insight_{Guid.NewGuid():N}",
             Type = "RetryBudgetExhausted",
             Title = $"Retry budget exhausted for {nodeId}",
-            Description = $"Node {nodeId} has exhausted its retry budget. Remaining: {retryBudget}.",
+            Description =
+                $"Node {nodeId} has exhausted its retry budget. Remaining: {retryBudget}.",
             RelatedNodeIds = new[] { nodeId },
             Confidence = 1.0,
             Severity = "Warning",
-            GeneratedAt = DateTime.UtcNow
+            GeneratedAt = DateTime.UtcNow,
         };
 
         await _store.InsertInsightAsync(insight, ct);
@@ -122,18 +131,20 @@ public sealed class InsightGenerator
     /// <returns>The generated insight.</returns>
     public async Task<Insight> GenerateClusterDiscoveredAsync(
         Cluster cluster,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var insight = new Insight
         {
             Id = $"insight_{Guid.NewGuid():N}",
             Type = "ClusterDiscovered",
             Title = $"Cluster discovered with {cluster.Size} nodes",
-            Description = $"A cluster of {cluster.Size} nodes was discovered. Modularity: {cluster.Modularity:F3}.",
+            Description =
+                $"A cluster of {cluster.Size} nodes was discovered. Modularity: {cluster.Modularity:F3}.",
             RelatedNodeIds = cluster.NodeIds,
             Confidence = cluster.Modularity,
             Severity = "Info",
-            GeneratedAt = DateTime.UtcNow
+            GeneratedAt = DateTime.UtcNow,
         };
 
         await _store.InsertInsightAsync(insight, ct);

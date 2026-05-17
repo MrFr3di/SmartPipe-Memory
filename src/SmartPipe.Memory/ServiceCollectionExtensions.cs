@@ -22,7 +22,8 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddSmartPipeMemory(
         this IServiceCollection services,
-        Action<MemoryConfiguration>? configure = null)
+        Action<MemoryConfiguration>? configure = null
+    )
     {
         ArgumentNullException.ThrowIfNull(services);
 
@@ -74,7 +75,8 @@ public static class ServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddSmartPipeMemorySqlite(
         this IServiceCollection services,
-        Action<MemoryConfiguration> configure)
+        Action<MemoryConfiguration> configure
+    )
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configure);
@@ -87,7 +89,8 @@ public static class ServiceCollectionExtensions
         {
             var store = StoreFactory.CreateSqlite(
                 config.ConnectionString,
-                config.MetricsBufferCapacity);
+                config.MetricsBufferCapacity
+            );
             if (config.EnableAutoClassification && store is SqliteWALStore sqliteStore)
             {
                 sqliteStore.Classifier = new AutoClassifier();

@@ -12,9 +12,7 @@ public sealed class DegreeCentrality
     /// <param name="edges">All edges in the graph, keyed by source node id.</param>
     /// <param name="nodeId">Node identifier to compute centrality for.</param>
     /// <returns>Number of outgoing edges from the node.</returns>
-    public int Compute(
-        IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
-        string nodeId)
+    public int Compute(IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges, string nodeId)
     {
         ArgumentNullException.ThrowIfNull(edges);
         ArgumentException.ThrowIfNullOrEmpty(nodeId);

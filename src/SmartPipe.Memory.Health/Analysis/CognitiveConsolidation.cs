@@ -39,15 +39,18 @@ public sealed class CognitiveConsolidation
     public async Task<Insight> ConsolidateAsync(
         Insight newInsight,
         IReadOnlyList<Insight> existingInsights,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(newInsight);
         ArgumentNullException.ThrowIfNull(existingInsights);
 
         // Find similar insights: same type and overlapping related nodes
         var similar = existingInsights
-            .Where(i => i.Type == newInsight.Type
-                && i.RelatedNodeIds.Intersect(newInsight.RelatedNodeIds).Any())
+            .Where(i =>
+                i.Type == newInsight.Type
+                && i.RelatedNodeIds.Intersect(newInsight.RelatedNodeIds).Any()
+            )
             .ToList();
 
         similar.Add(newInsight);
@@ -56,24 +59,25 @@ public sealed class CognitiveConsolidation
             return newInsight;
 
         // Create consolidated insight with higher confidence
-        var allRelatedNodes = similar
-            .SelectMany(i => i.RelatedNodeIds)
-            .Distinct()
-            .ToList();
+        var allRelatedNodes = similar.SelectMany(i => i.RelatedNodeIds).Distinct().ToList();
 
         var averageConfidence = similar.Average(i => i.Confidence);
-        var consolidatedConfidence = Math.Min(averageConfidence + 0.1 * (similar.Count - MinOccurrences), 1.0);
+        var consolidatedConfidence = Math.Min(
+            averageConfidence + 0.1 * (similar.Count - MinOccurrences),
+            1.0
+        );
 
         var consolidated = new Insight
         {
             Id = $"consolidated_{Guid.NewGuid():N}",
             Type = newInsight.Type,
             Title = $"Consolidated: {newInsight.Title} ({similar.Count} occurrences)",
-            Description = $"This insight has been detected {similar.Count} times. {newInsight.Description}",
+            Description =
+                $"This insight has been detected {similar.Count} times. {newInsight.Description}",
             RelatedNodeIds = allRelatedNodes,
             Confidence = consolidatedConfidence,
             Severity = newInsight.Severity,
-            GeneratedAt = DateTime.UtcNow
+            GeneratedAt = DateTime.UtcNow,
         };
 
         await _store.InsertInsightAsync(consolidated, ct);
@@ -90,7 +94,8 @@ public sealed class CognitiveConsolidation
     public async Task<IReadOnlyList<Insight>> ConsolidateAllByTypeAsync(
         string insightType,
         IReadOnlyList<Insight> allInsights,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentException.ThrowIfNullOrEmpty(insightType);
         ArgumentNullException.ThrowIfNull(allInsights);
@@ -123,14 +128,16 @@ public sealed class CognitiveConsolidation
 
         for (var i = 0; i < insights.Count; i++)
         {
-            if (used.Contains(i)) continue;
+            if (used.Contains(i))
+                continue;
 
             var group = new List<Insight> { insights[i] };
             used.Add(i);
 
             for (var j = i + 1; j < insights.Count; j++)
             {
-                if (used.Contains(j)) continue;
+                if (used.Contains(j))
+                    continue;
 
                 if (insights[i].RelatedNodeIds.Intersect(insights[j].RelatedNodeIds).Any())
                 {

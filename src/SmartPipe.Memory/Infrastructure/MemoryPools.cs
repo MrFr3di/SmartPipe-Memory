@@ -13,14 +13,12 @@ public static class MemoryPools
     /// <summary>
     /// Pool for <see cref="Graph.Node"/> instances.
     /// </summary>
-    public static ObjectPool<Graph.Node> NodePool { get; } = new(
-        factory: () => new Graph.Node(),
-        capacity: 256);
+    public static ObjectPool<Graph.Node> NodePool { get; } =
+        new(factory: () => new Graph.Node(), capacity: 256);
 
     /// <summary>
     /// Pool for <see cref="Graph.Edge"/> instances.
     /// </summary>
-    public static ObjectPool<Graph.Edge> EdgePool { get; } = new(
-        factory: () => new Graph.Edge(),
-        capacity: 256);
+    public static ObjectPool<Graph.Edge> EdgePool { get; } =
+        new(factory: () => new Graph.Edge(), capacity: 256);
 }

@@ -2,7 +2,6 @@ using Microsoft.Extensions.Hosting;
 using SmartPipe.Memory.Health.Analysis;
 using SmartPipe.Memory.Storage;
 
-
 namespace SmartPipe.Memory.Health.Infrastructure;
 
 /// <summary>
@@ -27,10 +26,12 @@ public sealed class InsightAgent : BackgroundService
         IGraphStore store,
         InsightGenerator insightGenerator,
         CognitiveConsolidation consolidation,
-        TimeSpan? interval = null)
+        TimeSpan? interval = null
+    )
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
-        _insightGenerator = insightGenerator ?? throw new ArgumentNullException(nameof(insightGenerator));
+        _insightGenerator =
+            insightGenerator ?? throw new ArgumentNullException(nameof(insightGenerator));
         _consolidation = consolidation ?? throw new ArgumentNullException(nameof(consolidation));
         _interval = interval ?? TimeSpan.FromSeconds(30);
     }
@@ -60,10 +61,7 @@ public sealed class InsightAgent : BackgroundService
 
     private async Task AnalyzeUnhealthyNodesAsync(CancellationToken ct)
     {
-        var query = new Model.MemoryQuery
-        {
-            Type = Model.QueryType.FindNodes
-        };
+        var query = new Model.MemoryQuery { Type = Model.QueryType.FindNodes };
 
         await foreach (var node in _store.QueryNodesAsync(query, ct))
         {
@@ -81,12 +79,16 @@ public sealed class InsightAgent : BackgroundService
                 {
                     ["AvgLatencyMs"] = node.PredictedLatencyMs,
                     ["SmoothThroughput"] = 0,
-                    ["ItemsFailed"] = 0
-                }
+                    ["ItemsFailed"] = 0,
+                },
             };
 
             var insight = await _insightGenerator.AnalyzeNodeAsync(
-                node.Id, snapshot, [snapshot], ct);
+                node.Id,
+                snapshot,
+                [snapshot],
+                ct
+            );
 
             if (insight is not null)
             {
@@ -98,26 +100,26 @@ public sealed class InsightAgent : BackgroundService
 
     private async Task<IReadOnlyList<Graph.Insight>> GetAllInsightsForNodeAsync(
         string nodeId,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         var insights = new List<Graph.Insight>();
-        var query = new Model.MemoryQuery
-        {
-            Type = Model.QueryType.FindInsights
-        };
+        var query = new Model.MemoryQuery { Type = Model.QueryType.FindInsights };
 
         await foreach (var edge in _store.QueryInsightsAsync(query, ct))
         {
             if (edge.FromNodeId == nodeId || edge.ToNodeId == nodeId)
             {
-                insights.Add(new Graph.Insight
-                {
-                    Id = edge.ToNodeId,
-                    Type = edge.Type.ToString(),
-                    RelatedNodeIds = [edge.FromNodeId],
-                    Confidence = edge.Confidence,
-                    GeneratedAt = edge.ValidFrom
-                });
+                insights.Add(
+                    new Graph.Insight
+                    {
+                        Id = edge.ToNodeId,
+                        Type = edge.Type.ToString(),
+                        RelatedNodeIds = [edge.FromNodeId],
+                        Confidence = edge.Confidence,
+                        GeneratedAt = edge.ValidFrom,
+                    }
+                );
             }
         }
 

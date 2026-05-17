@@ -24,7 +24,11 @@ public sealed class MemoryQueryExecutor
     /// <param name="store">The graph store to query.</param>
     /// <param name="cache">Node cache for faster lookups.</param>
     /// <param name="metrics">Optional metrics collector.</param>
-    public MemoryQueryExecutor(IGraphStore store, Caching.NodeCache cache, MemoryMetrics? metrics = null)
+    public MemoryQueryExecutor(
+        IGraphStore store,
+        Caching.NodeCache cache,
+        MemoryMetrics? metrics = null
+    )
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
@@ -39,7 +43,8 @@ public sealed class MemoryQueryExecutor
     /// <returns>Async stream of query results.</returns>
     public async IAsyncEnumerable<QueryResult> ExecuteAsync(
         MemoryQuery query,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(query);
         _metrics?.RecordQuery();
@@ -73,7 +78,8 @@ public sealed class MemoryQueryExecutor
 
     private async IAsyncEnumerable<QueryResult> ExecuteFindNodesAsync(
         MemoryQuery query,
-        [EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         using var activity = MemoryActivitySource.StartQuery("FindNodes");
         try
@@ -96,7 +102,8 @@ public sealed class MemoryQueryExecutor
 
     private async IAsyncEnumerable<QueryResult> ExecuteFindPathAsync(
         MemoryQuery query,
-        [EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         using var activity = MemoryActivitySource.StartQuery("FindPath");
         try
@@ -109,7 +116,8 @@ public sealed class MemoryQueryExecutor
                 query.NodeFilter,
                 query.MinWeight,
                 query.MinConfidence,
-                ct);
+                ct
+            );
 
             if (segments.Count > 0)
             {
@@ -117,7 +125,7 @@ public sealed class MemoryQueryExecutor
                 {
                     Type = ResultType.Path,
                     Path = segments.Select(s => s.NodeId).ToList(),
-                    TotalWeight = segments.Sum(s => s.Weight)
+                    TotalWeight = segments.Sum(s => s.Weight),
                 };
             }
         }
@@ -129,23 +137,32 @@ public sealed class MemoryQueryExecutor
 
     private async IAsyncEnumerable<QueryResult> ExecuteTraverseAsync(
         MemoryQuery query,
-        [EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         using var activity = MemoryActivitySource.StartQuery("Traverse");
         try
         {
-            await foreach (var (node, depth) in _store.TraverseAsync(
-                query.StartNodeId!,
-                query.EdgeType ?? "DerivedFrom",
-                query.MaxDepth ?? 3,
-                query.Limit ?? 100,
-                query.NodeFilter,
-                query.MinWeight,
-                query.MinConfidence,
-                ct))
+            await foreach (
+                var (node, depth) in _store.TraverseAsync(
+                    query.StartNodeId!,
+                    query.EdgeType ?? "DerivedFrom",
+                    query.MaxDepth ?? 3,
+                    query.Limit ?? 100,
+                    query.NodeFilter,
+                    query.MinWeight,
+                    query.MinConfidence,
+                    ct
+                )
+            )
             {
                 _cache.Set(node.Id, node);
-                yield return new QueryResult { Type = ResultType.Node, Node = node, Depth = depth };
+                yield return new QueryResult
+                {
+                    Type = ResultType.Node,
+                    Node = node,
+                    Depth = depth,
+                };
             }
         }
         finally
@@ -161,7 +178,8 @@ public sealed class MemoryQueryExecutor
     /// </summary>
     private static async IAsyncEnumerable<QueryResult> ExecuteFindInsightsAsync(
         MemoryQuery query,
-        [EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         await Task.CompletedTask;
         yield break;

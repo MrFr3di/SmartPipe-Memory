@@ -22,12 +22,17 @@ public sealed class ToGraphSinkTests : IAsyncDisposable
             Id = entity.Id,
             Type = "File",
             Label = entity.Name,
-            Properties = new Dictionary<string, object> { ["size"] = entity.Size }
+            Properties = new Dictionary<string, object> { ["size"] = entity.Size },
         });
 
         await sink.InitializeAsync(CancellationToken.None);
 
-        var entity = new TestEntity { Id = "e1", Name = "doc.pdf", Size = 2048 };
+        var entity = new TestEntity
+        {
+            Id = "e1",
+            Name = "doc.pdf",
+            Size = 2048,
+        };
         var result = ProcessingResult<TestEntity>.Success(entity, 1);
 
         await sink.WriteAsync(result, CancellationToken.None);
@@ -46,7 +51,7 @@ public sealed class ToGraphSinkTests : IAsyncDisposable
         {
             Id = entity.Id,
             Type = "File",
-            Label = entity.Name
+            Label = entity.Name,
         });
 
         await sink.InitializeAsync(CancellationToken.None);
@@ -67,7 +72,7 @@ public sealed class ToGraphSinkTests : IAsyncDisposable
         {
             Id = entity.Id,
             Type = "File",
-            Label = entity.Name
+            Label = entity.Name,
         });
 
         await sink.InitializeAsync(CancellationToken.None);

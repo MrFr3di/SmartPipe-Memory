@@ -14,7 +14,8 @@ public sealed class HealthVectorTests
             resourceStrain: 0.3,
             p50LatencyMs: 10,
             p95LatencyMs: 50,
-            p99LatencyMs: 200);
+            p99LatencyMs: 200
+        );
 
         Assert.Equal(500, health.PredictedLatencyMs);
         Assert.Equal(0.2, health.FailureProbability);
@@ -45,7 +46,8 @@ public sealed class HealthVectorTests
             resourceStrain: 1.0,
             p50LatencyMs: 2000,
             p95LatencyMs: 2000,
-            p99LatencyMs: 2000);
+            p99LatencyMs: 2000
+        );
 
         Assert.True(health.HealthScore < 0.3);
     }
@@ -64,7 +66,8 @@ public sealed class HealthVectorTests
             retryBudget: 5,
             failureWeight: 0.5,
             latencyWeight: 0.3,
-            strainWeight: 0.2);
+            strainWeight: 0.2
+        );
 
         Assert.Equal(5, health.RetryBudget);
         Assert.True(health.HealthScore is >= 0.0 and <= 1.0);
@@ -73,8 +76,20 @@ public sealed class HealthVectorTests
     [Fact]
     public void CreateWithWeights_WeightsDoNotSumToOne_Throws()
     {
-        Assert.Throws<ArgumentException>(() => HealthVector.CreateWithWeights(
-            0, 0, 0, 0, 0, 0, 0, 3,
-            failureWeight: 0.5, latencyWeight: 0.3, strainWeight: 0.1));
+        Assert.Throws<ArgumentException>(() =>
+            HealthVector.CreateWithWeights(
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                3,
+                failureWeight: 0.5,
+                latencyWeight: 0.3,
+                strainWeight: 0.1
+            )
+        );
     }
 }

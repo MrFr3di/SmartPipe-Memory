@@ -21,7 +21,8 @@ public sealed class NodeCache
     /// <param name="maxSize">Maximum number of nodes to cache. Default 10000.</param>
     public NodeCache(int maxSize = 10000)
     {
-        if (maxSize <= 0) throw new ArgumentOutOfRangeException(nameof(maxSize));
+        if (maxSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxSize));
 
         _maxSize = maxSize;
         _lruList = new LinkedList<string>();
@@ -34,7 +35,11 @@ public sealed class NodeCache
     /// </summary>
     public int Count
     {
-        get { lock (_syncRoot) return _cache.Count; }
+        get
+        {
+            lock (_syncRoot)
+                return _cache.Count;
+        }
     }
 
     /// <summary>
@@ -133,7 +138,8 @@ public sealed class NodeCache
     private void EvictLeastRecentlyUsed()
     {
         var last = _lruList.Last;
-        if (last is null) return;
+        if (last is null)
+            return;
 
         _lruList.RemoveLast();
         _lookup.Remove(last.Value);

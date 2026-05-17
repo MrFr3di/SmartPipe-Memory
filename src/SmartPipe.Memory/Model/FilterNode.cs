@@ -72,5 +72,5 @@ public enum FilterOperator
     GreaterThan,
 
     /// <summary>Property equals value.</summary>
-    Equals
+    Equals,
 }

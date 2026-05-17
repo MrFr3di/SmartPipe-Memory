@@ -58,13 +58,21 @@ public interface IGraphStore : IAsyncDisposable
     /// Stream nodes as they existed at a specific point in time.
     /// Filters by <c>ValidFrom &lt;= asOf AND (ValidTo IS NULL OR ValidTo &gt; asOf)</c>.
     /// </summary>
-    IAsyncEnumerable<Node> QueryNodesAsOfAsync(MemoryQuery query, DateTime asOf, CancellationToken ct = default);
+    IAsyncEnumerable<Node> QueryNodesAsOfAsync(
+        MemoryQuery query,
+        DateTime asOf,
+        CancellationToken ct = default
+    );
 
     /// <summary>
     /// Stream edges as they existed at a specific point in time.
     /// Filters by <c>ValidFrom &lt;= asOf AND (ValidTo IS NULL OR ValidTo &gt; asOf)</c>.
     /// </summary>
-    IAsyncEnumerable<Edge> QueryEdgesAsOfAsync(MemoryQuery query, DateTime asOf, CancellationToken ct = default);
+    IAsyncEnumerable<Edge> QueryEdgesAsOfAsync(
+        MemoryQuery query,
+        DateTime asOf,
+        CancellationToken ct = default
+    );
 
     /// <summary>Find shortest path between two nodes.</summary>
     /// <param name="fromNodeId">Start node identifier.</param>
@@ -83,7 +91,8 @@ public interface IGraphStore : IAsyncDisposable
         Func<Node, bool>? nodeFilter = null,
         double? minWeight = null,
         double? minConfidence = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 
     /// <summary>Traverse graph from a starting node.</summary>
     /// <param name="startNodeId">Start node identifier.</param>
@@ -102,7 +111,8 @@ public interface IGraphStore : IAsyncDisposable
         Func<Node, bool>? nodeFilter = null,
         double? minWeight = null,
         double? minConfidence = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 
     /// <summary>Query insights.</summary>
     IAsyncEnumerable<Edge> QueryInsightsAsync(MemoryQuery query, CancellationToken ct = default);
@@ -115,9 +125,12 @@ public interface IGraphStore : IAsyncDisposable
 
     /// <summary>Returns all nodes as a read-only dictionary.</summary>
     IReadOnlyDictionary<string, Node> GetAllNodes();
-    
+
     /// <summary>Get weakened edges from a node (weight &lt; 0.3) for decay recalculation.</summary>
-    Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default);
+    Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(
+        string nodeId,
+        CancellationToken ct = default
+    );
 
     /// <summary>Save a predictive analytics insight.</summary>
     Task InsertInsightAsync(Insight insight, CancellationToken ct = default);
@@ -130,7 +143,8 @@ public interface IGraphStore : IAsyncDisposable
         double predictedLatencyMs,
         double resourceStrain,
         int expectedVersion,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 
     /// <summary>Channel for buffering metrics from synchronous OnMetrics callback.</summary>
     System.Threading.Channels.ChannelWriter<MetricsEntry> MetricsChannel { get; }
@@ -151,7 +165,7 @@ public enum StoreState
     Drained,
 
     /// <summary>Error state.</summary>
-    Faulted
+    Faulted,
 }
 
 /// <summary>

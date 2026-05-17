@@ -24,12 +24,28 @@ public sealed class WeaklyConnectedComponentsTests
             ["A"] = new Node { Id = "A", Type = "File" },
             ["B"] = new Node { Id = "B", Type = "File" },
             ["C"] = new Node { Id = "C", Type = "File" },
-            ["D"] = new Node { Id = "D", Type = "File" }
+            ["D"] = new Node { Id = "D", Type = "File" },
         };
         var edges = new Dictionary<string, IReadOnlyList<Edge>>
         {
-            ["A"] = new List<Edge> { new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom } },
-            ["C"] = new List<Edge> { new Edge { FromNodeId = "C", ToNodeId = "D", Type = EdgeType.DerivedFrom } }
+            ["A"] = new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "A",
+                    ToNodeId = "B",
+                    Type = EdgeType.DerivedFrom,
+                },
+            },
+            ["C"] = new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "C",
+                    ToNodeId = "D",
+                    Type = EdgeType.DerivedFrom,
+                },
+            },
         };
 
         var result = WeaklyConnectedComponents.Find(nodes, edges);
@@ -44,12 +60,28 @@ public sealed class WeaklyConnectedComponentsTests
         {
             ["A"] = new Node { Id = "A", Type = "File" },
             ["B"] = new Node { Id = "B", Type = "File" },
-            ["C"] = new Node { Id = "C", Type = "File" }
+            ["C"] = new Node { Id = "C", Type = "File" },
         };
         var edges = new Dictionary<string, IReadOnlyList<Edge>>
         {
-            ["A"] = new List<Edge> { new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom } },
-            ["B"] = new List<Edge> { new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom } }
+            ["A"] = new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "A",
+                    ToNodeId = "B",
+                    Type = EdgeType.DerivedFrom,
+                },
+            },
+            ["B"] = new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "B",
+                    ToNodeId = "C",
+                    Type = EdgeType.DerivedFrom,
+                },
+            },
         };
 
         var result = WeaklyConnectedComponents.Find(nodes, edges);

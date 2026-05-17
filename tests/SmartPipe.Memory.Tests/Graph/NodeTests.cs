@@ -34,7 +34,7 @@ public sealed class NodeTests
         {
             ["path"] = "/data/file.txt",
             ["size"] = 1024L,
-            ["hash"] = "sha256:abc123"
+            ["hash"] = "sha256:abc123",
         };
 
         var node = new Node
@@ -42,7 +42,7 @@ public sealed class NodeTests
             Id = "n1",
             Type = "File",
             Label = "file.txt",
-            Properties = props
+            Properties = props,
         };
 
         Assert.Equal("file.txt", node.Label);
@@ -57,14 +57,14 @@ public sealed class NodeTests
         var meta = new Dictionary<string, string>
         {
             ["lineage_source"] = "orders_db",
-            ["lineage_pipeline"] = "etl_main"
+            ["lineage_pipeline"] = "etl_main",
         };
 
         var node = new Node
         {
             Id = "n1",
             Type = "Record",
-            Metadata = meta
+            Metadata = meta,
         };
 
         Assert.Equal(2, node.Metadata.Count);
@@ -119,7 +119,7 @@ public sealed class NodeTests
             Id = "n1",
             Type = "File",
             ValidFrom = past,
-            ValidTo = future
+            ValidTo = future,
         };
 
         Assert.Equal(past, node.ValidFrom);

@@ -8,11 +8,7 @@ public sealed class MemoryQueryTests
     [Fact]
     public void NewFields_DefaultToNull()
     {
-        var query = new MemoryQuery
-        {
-            NodeType = "File",
-            Type = QueryType.FindNodes
-        };
+        var query = new MemoryQuery { NodeType = "File", Type = QueryType.FindNodes };
 
         Assert.Null(query.AsOf);
         Assert.Null(query.TimeRangeFrom);
@@ -31,7 +27,7 @@ public sealed class MemoryQueryTests
         {
             NodeType = "File",
             Type = QueryType.FindNodes,
-            AsOf = timestamp
+            AsOf = timestamp,
         };
 
         Assert.Equal(timestamp, query.AsOf);
@@ -48,7 +44,7 @@ public sealed class MemoryQueryTests
             NodeType = "File",
             Type = QueryType.FindNodes,
             TimeRangeFrom = from,
-            TimeRangeTo = to
+            TimeRangeTo = to,
         };
 
         Assert.Equal(from, query.TimeRangeFrom);
@@ -62,7 +58,7 @@ public sealed class MemoryQueryTests
         {
             NodeType = "File",
             Type = QueryType.FindNodes,
-            MinWeight = 0.5
+            MinWeight = 0.5,
         };
 
         Assert.Equal(0.5, query.MinWeight);
@@ -75,7 +71,7 @@ public sealed class MemoryQueryTests
         {
             NodeType = "File",
             Type = QueryType.FindNodes,
-            MinConfidence = 0.9
+            MinConfidence = 0.9,
         };
 
         Assert.Equal(0.9, query.MinConfidence);
@@ -90,12 +86,30 @@ public sealed class MemoryQueryTests
         {
             NodeType = "File",
             Type = QueryType.FindNodes,
-            NodeFilter = predicate
+            NodeFilter = predicate,
         };
 
         Assert.NotNull(query.NodeFilter);
-        Assert.True(query.NodeFilter(new Node { Id = "n1", Type = "File", HealthScore = 0.8 }));
-        Assert.False(query.NodeFilter(new Node { Id = "n2", Type = "File", HealthScore = 0.3 }));
+        Assert.True(
+            query.NodeFilter(
+                new Node
+                {
+                    Id = "n1",
+                    Type = "File",
+                    HealthScore = 0.8,
+                }
+            )
+        );
+        Assert.False(
+            query.NodeFilter(
+                new Node
+                {
+                    Id = "n2",
+                    Type = "File",
+                    HealthScore = 0.3,
+                }
+            )
+        );
     }
 
     [Fact]
@@ -115,7 +129,7 @@ public sealed class MemoryQueryTests
             AsOf = DateTime.UtcNow.AddDays(-7),
             MinWeight = 0.3,
             MinConfidence = 0.8,
-            NodeFilter = node => node.HealthScore > 0.2
+            NodeFilter = node => node.HealthScore > 0.2,
         };
 
         Assert.NotNull(query.AsOf);

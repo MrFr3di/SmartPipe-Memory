@@ -22,7 +22,10 @@ public static class StoreFactory
     /// <param name="connectionString">Path to the SQLite database file.</param>
     /// <param name="metricsCapacity">Capacity of the metrics buffer channel.</param>
     /// <returns>A new <see cref="SqliteWALStore"/>. Requires initialization before use.</returns>
-    public static SqliteWALStore CreateSqlite(string connectionString = "memory.db", int metricsCapacity = 10000)
+    public static SqliteWALStore CreateSqlite(
+        string connectionString = "memory.db",
+        int metricsCapacity = 10000
+    )
     {
         return new SqliteWALStore(connectionString, metricsCapacity);
     }

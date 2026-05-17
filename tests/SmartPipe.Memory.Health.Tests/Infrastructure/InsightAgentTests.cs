@@ -21,7 +21,12 @@ public sealed class InsightAgentTests : IAsyncDisposable
         var generator = new InsightGenerator(predictor, _store);
         var consolidation = new CognitiveConsolidation(_store);
 
-        var agent = new InsightAgent(_store, generator, consolidation, TimeSpan.FromMilliseconds(100));
+        var agent = new InsightAgent(
+            _store,
+            generator,
+            consolidation,
+            TimeSpan.FromMilliseconds(100)
+        );
 
         // Start the agent
         await agent.StartAsync(CancellationToken.None);
@@ -39,14 +44,26 @@ public sealed class InsightAgentTests : IAsyncDisposable
     [Fact]
     public async Task ExecuteAsync_WithUnhealthyNodes_GeneratesInsights()
     {
-        await _store.UpsertNodeAsync(new Graph.Node { Id = "n1", Type = "File", HealthScore = 0.5 });
+        await _store.UpsertNodeAsync(
+            new Graph.Node
+            {
+                Id = "n1",
+                Type = "File",
+                HealthScore = 0.5,
+            }
+        );
 
         var calculator = new HealthVectorCalculator(_store);
         var predictor = new BottleneckPredictor(calculator, _store);
         var generator = new InsightGenerator(predictor, _store);
         var consolidation = new CognitiveConsolidation(_store);
 
-        var agent = new InsightAgent(_store, generator, consolidation, TimeSpan.FromMilliseconds(50));
+        var agent = new InsightAgent(
+            _store,
+            generator,
+            consolidation,
+            TimeSpan.FromMilliseconds(50)
+        );
 
         await agent.StartAsync(CancellationToken.None);
         await Task.Delay(150);

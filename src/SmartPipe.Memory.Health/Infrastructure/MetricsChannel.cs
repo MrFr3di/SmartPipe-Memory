@@ -15,15 +15,14 @@ public sealed class MetricsChannel
     /// <param name="capacity">Maximum number of pending metrics entries. Default 10000.</param>
     public MetricsChannel(int capacity = 10000)
     {
-        _channel = Channel.CreateBounded<MetricsEntry>(new BoundedChannelOptions(capacity)
-        {
-            FullMode = BoundedChannelFullMode.DropOldest
-        });
+        _channel = Channel.CreateBounded<MetricsEntry>(
+            new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.DropOldest }
+        );
     }
 
     /// <summary>Writer for enqueuing metrics entries.</summary>
     public ChannelWriter<MetricsEntry> Writer => _channel.Writer;
-    
+
     /// <summary>Reader for consuming metrics entries.</summary>
     public ChannelReader<MetricsEntry> Reader => _channel.Reader;
 }

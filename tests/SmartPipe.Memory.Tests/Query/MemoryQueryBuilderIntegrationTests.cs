@@ -27,9 +27,33 @@ public sealed class MemoryQueryBuilderIntegrationTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "C", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom, Weight = 1.0 });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom, Weight = 1.0 });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "C", Type = EdgeType.DerivedFrom, Weight = 1.0 });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+                Weight = 1.0,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "B",
+                ToNodeId = "C",
+                Type = EdgeType.DerivedFrom,
+                Weight = 1.0,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "C",
+                Type = EdgeType.DerivedFrom,
+                Weight = 1.0,
+            }
+        );
 
         var clusters = new List<QueryResult>();
         await foreach (var c in _builder.FindClusters())
@@ -44,7 +68,15 @@ public sealed class MemoryQueryBuilderIntegrationTests : IAsyncDisposable
     {
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom, Weight = 1.0 });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+                Weight = 1.0,
+            }
+        );
 
         var estimate = _builder.EstimateNeighbors("A");
         Assert.True(estimate > 0);
@@ -56,8 +88,24 @@ public sealed class MemoryQueryBuilderIntegrationTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "C", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom, Weight = 1.0 });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "C", Type = EdgeType.DerivedFrom, Weight = 1.0 });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+                Weight = 1.0,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "C",
+                Type = EdgeType.DerivedFrom,
+                Weight = 1.0,
+            }
+        );
 
         var degree = _builder.HasDegree("A");
         Assert.Equal(2, degree);

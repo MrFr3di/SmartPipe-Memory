@@ -37,10 +37,13 @@ public enum ResultType
 {
     /// <summary>Node result.</summary>
     Node,
+
     /// <summary>Edge result.</summary>
     Edge,
+
     /// <summary>Path result.</summary>
     Path,
+
     /// <summary>Cluster result.</summary>
-    Cluster
+    Cluster,
 }

@@ -22,16 +22,23 @@ public sealed class MemoryLeakTests : IAsyncDisposable
             // Insert batch
             for (var i = 0; i < 100; i++)
             {
-                await _store.UpsertNodeAsync(new Node
-                {
-                    Id = $"n{iteration}_{i}",
-                    Type = "File",
-                    Label = $"file_{iteration}_{i}.txt"
-                });
+                await _store.UpsertNodeAsync(
+                    new Node
+                    {
+                        Id = $"n{iteration}_{i}",
+                        Type = "File",
+                        Label = $"file_{iteration}_{i}.txt",
+                    }
+                );
             }
 
             // Query
-            var query = new MemoryQuery { NodeType = "File", Type = QueryType.FindNodes, Limit = 10 };
+            var query = new MemoryQuery
+            {
+                NodeType = "File",
+                Type = QueryType.FindNodes,
+                Limit = 10,
+            };
             var count = 0;
             await foreach (var _ in _store.QueryNodesAsync(query))
                 count++;
@@ -64,8 +71,10 @@ public sealed class MemoryLeakTests : IAsyncDisposable
         sw.Stop();
 
         // 500 cycles should complete in under 1 second
-        Assert.True(sw.ElapsedMilliseconds < 1000,
-            $"500 upsert/delete cycles took {sw.ElapsedMilliseconds}ms, expected < 1000ms");
+        Assert.True(
+            sw.ElapsedMilliseconds < 1000,
+            $"500 upsert/delete cycles took {sw.ElapsedMilliseconds}ms, expected < 1000ms"
+        );
     }
 
     [Fact]
@@ -77,12 +86,14 @@ public sealed class MemoryLeakTests : IAsyncDisposable
 
         for (var i = 0; i < 100; i++)
         {
-            await _store.UpsertNodeAsync(new Node
-            {
-                Id = $"large_{i}",
-                Type = "File",
-                Properties = new Dictionary<string, object>(largeData)
-            });
+            await _store.UpsertNodeAsync(
+                new Node
+                {
+                    Id = $"large_{i}",
+                    Type = "File",
+                    Properties = new Dictionary<string, object>(largeData),
+                }
+            );
         }
 
         // Force cleanup

@@ -18,7 +18,8 @@ public static class WeaklyConnectedComponents
     /// <returns>List of WCCs, each represented as a list of node identifiers.</returns>
     public static List<List<string>> Find(
         IReadOnlyDictionary<string, Node> nodes,
-        IReadOnlyDictionary<string, IReadOnlyList<Edge>> outEdges)
+        IReadOnlyDictionary<string, IReadOnlyList<Edge>> outEdges
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -57,12 +58,18 @@ public static class WeaklyConnectedComponents
         return parent[nodeId];
     }
 
-    private static void Union(string a, string b, Dictionary<string, string> parent, Dictionary<string, int> rank)
+    private static void Union(
+        string a,
+        string b,
+        Dictionary<string, string> parent,
+        Dictionary<string, int> rank
+    )
     {
         var rootA = Find(a, parent);
         var rootB = Find(b, parent);
 
-        if (rootA == rootB) return;
+        if (rootA == rootB)
+            return;
 
         if (rank[rootA] < rank[rootB])
             parent[rootA] = rootB;

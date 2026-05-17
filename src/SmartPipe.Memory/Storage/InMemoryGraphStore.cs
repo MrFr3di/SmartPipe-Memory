@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using SmartPipe.Memory.Algorithms.Classification;
 using SmartPipe.Memory.Graph;
 using SmartPipe.Memory.Model;
-using SmartPipe.Memory.Algorithms.Classification;
 
 namespace SmartPipe.Memory.Storage;
 
@@ -28,10 +28,12 @@ public sealed class InMemoryGraphStore : IGraphStore
     /// <param name="metricsCapacity">Capacity of the metrics buffer channel.</param>
     public InMemoryGraphStore(int metricsCapacity = 10000)
     {
-        _metricsChannel = Channel.CreateBounded<MetricsEntry>(new BoundedChannelOptions(metricsCapacity)
-        {
-            FullMode = BoundedChannelFullMode.DropOldest
-        });
+        _metricsChannel = Channel.CreateBounded<MetricsEntry>(
+            new BoundedChannelOptions(metricsCapacity)
+            {
+                FullMode = BoundedChannelFullMode.DropOldest,
+            }
+        );
     }
 
     /// <inheritdoc />
@@ -74,7 +76,7 @@ public sealed class InMemoryGraphStore : IGraphStore
                 ResourceStrain = node.ResourceStrain,
                 ValidFrom = node.ValidFrom.ToUniversalTime(),
                 ValidTo = node.ValidTo?.ToUniversalTime(),
-                Version = node.Version + 1
+                Version = node.Version + 1,
             };
 
             _nodes[node.Id] = updated;
@@ -90,11 +92,14 @@ public sealed class InMemoryGraphStore : IGraphStore
     public Task BatchUpsertNodesAsync(IAsyncEnumerable<Node> nodes, CancellationToken ct = default)
     {
         ThrowIfNotRunning();
-        return Task.Run(async () =>
-        {
-            await foreach (var node in nodes.WithCancellation(ct))
-                await UpsertNodeAsync(node, ct);
-        }, ct);
+        return Task.Run(
+            async () =>
+            {
+                await foreach (var node in nodes.WithCancellation(ct))
+                    await UpsertNodeAsync(node, ct);
+            },
+            ct
+        );
     }
 
     /// <inheritdoc />
@@ -143,11 +148,13 @@ public sealed class InMemoryGraphStore : IGraphStore
                 SourceType = edge.SourceType,
                 Steps = edge.Steps,
                 ValidFrom = edge.ValidFrom,
-                ValidTo = edge.ValidTo
+                ValidTo = edge.ValidTo,
             };
 
             var edges = _outEdges.GetOrAdd(newEdge.FromNodeId, _ => new List<Edge>());
-            var existingIndex = edges.FindIndex(e => e.ToNodeId == newEdge.ToNodeId && e.Type == newEdge.Type);
+            var existingIndex = edges.FindIndex(e =>
+                e.ToNodeId == newEdge.ToNodeId && e.Type == newEdge.Type
+            );
 
             if (existingIndex >= 0)
                 edges[existingIndex] = newEdge;
@@ -184,7 +191,8 @@ public sealed class InMemoryGraphStore : IGraphStore
     /// <inheritdoc />
     public async IAsyncEnumerable<Node> QueryNodesAsync(
         MemoryQuery query,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default
+    )
     {
         IEnumerable<Node> result = _nodes.Values;
 
@@ -196,7 +204,10 @@ public sealed class InMemoryGraphStore : IGraphStore
 
         // Time-travel filter
         if (query.AsOf.HasValue)
-            result = result.Where(n => n.ValidFrom <= query.AsOf.Value && (n.ValidTo == null || n.ValidTo >= query.AsOf.Value));
+            result = result.Where(n =>
+                n.ValidFrom <= query.AsOf.Value
+                && (n.ValidTo == null || n.ValidTo >= query.AsOf.Value)
+            );
 
         if (query.OrderBy is not null)
             result = ApplyOrdering(result, query.OrderBy, query.OrderDesc);
@@ -217,7 +228,8 @@ public sealed class InMemoryGraphStore : IGraphStore
     public async IAsyncEnumerable<Node> QueryNodesAsOfAsync(
         MemoryQuery query,
         DateTime asOf,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default
+    )
     {
         var asOfQuery = query with { AsOf = asOf };
         await foreach (var node in QueryNodesAsync(asOfQuery, ct))
@@ -228,7 +240,8 @@ public sealed class InMemoryGraphStore : IGraphStore
     public async IAsyncEnumerable<Edge> QueryEdgesAsOfAsync(
         MemoryQuery query,
         DateTime asOf,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default
+    )
     {
         foreach (var (_, edges) in _outEdges)
         {
@@ -257,11 +270,21 @@ public sealed class InMemoryGraphStore : IGraphStore
         Func<Node, bool>? nodeFilter = null,
         double? minWeight = null,
         double? minConfidence = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var result = GraphTraversalEngine.FindPath(
-            _nodes, _outEdges, fromNodeId, toNodeId, edgeType, maxDepth,
-            nodeFilter, minWeight, minConfidence, ct);
+            _nodes,
+            _outEdges,
+            fromNodeId,
+            toNodeId,
+            edgeType,
+            maxDepth,
+            nodeFilter,
+            minWeight,
+            minConfidence,
+            ct
+        );
 
         return Task.FromResult(result);
     }
@@ -275,11 +298,23 @@ public sealed class InMemoryGraphStore : IGraphStore
         Func<Node, bool>? nodeFilter = null,
         double? minWeight = null,
         double? minConfidence = null,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default
+    )
     {
-        await foreach (var (node, depth) in GraphTraversalEngine.Traverse(
-            _nodes, _outEdges, startNodeId, edgeType, maxDepth, limit,
-            nodeFilter, minWeight, minConfidence, ct))
+        await foreach (
+            var (node, depth) in GraphTraversalEngine.Traverse(
+                _nodes,
+                _outEdges,
+                startNodeId,
+                edgeType,
+                maxDepth,
+                limit,
+                nodeFilter,
+                minWeight,
+                minConfidence,
+                ct
+            )
+        )
         {
             yield return (node, depth);
         }
@@ -288,9 +323,10 @@ public sealed class InMemoryGraphStore : IGraphStore
     /// <inheritdoc />
     public async IAsyncEnumerable<Edge> QueryInsightsAsync(
         MemoryQuery query,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        [EnumeratorCancellation] CancellationToken ct = default
+    )
     {
-    // Return stored insights as Edge objects for compatibility
+        // Return stored insights as Edge objects for compatibility
         foreach (var insight in _insights)
         {
             ct.ThrowIfCancellationRequested();
@@ -308,7 +344,7 @@ public sealed class InMemoryGraphStore : IGraphStore
                 ToNodeId = insight.Id,
                 Type = EdgeType.FeedsInto,
                 Weight = insight.Confidence,
-                Confidence = insight.Confidence
+                Confidence = insight.Confidence,
             };
         }
 
@@ -322,7 +358,8 @@ public sealed class InMemoryGraphStore : IGraphStore
         return leiden.Cluster(
             new Dictionary<string, Node>(_nodes),
             _outEdges.ToDictionary(kvp => kvp.Key, kvp => (IReadOnlyList<Edge>)kvp.Value),
-            ct: ct);
+            ct: ct
+        );
     }
 
     /// <inheritdoc />
@@ -335,7 +372,10 @@ public sealed class InMemoryGraphStore : IGraphStore
     public IReadOnlyDictionary<string, Node> GetAllNodes() => _nodes;
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(string nodeId, CancellationToken ct = default)
+    public Task<IReadOnlyList<Edge>> GetWeakenedEdgesFromAsync(
+        string nodeId,
+        CancellationToken ct = default
+    )
     {
         if (_outEdges.TryGetValue(nodeId, out var edges))
             return Task.FromResult<IReadOnlyList<Edge>>(edges.Where(e => e.Weight < 0.3).ToList());
@@ -359,13 +399,15 @@ public sealed class InMemoryGraphStore : IGraphStore
         double predictedLatencyMs,
         double resourceStrain,
         int expectedVersion,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         if (_nodes.TryGetValue(nodeId, out var node))
         {
             if (node.Version != expectedVersion)
                 throw new InvalidOperationException(
-                    $"Version mismatch for node {nodeId}: expected {expectedVersion}, actual {node.Version}");
+                    $"Version mismatch for node {nodeId}: expected {expectedVersion}, actual {node.Version}"
+                );
 
             node.HealthScore = healthScore;
             node.FailureProbability = failureProb;
@@ -400,14 +442,23 @@ public sealed class InMemoryGraphStore : IGraphStore
 
     // -- Private helpers --
 
-    private static IEnumerable<Node> ApplyPropertyFilter(IEnumerable<Node> nodes, FilterNode.PropertyFilter filter)
+    private static IEnumerable<Node> ApplyPropertyFilter(
+        IEnumerable<Node> nodes,
+        FilterNode.PropertyFilter filter
+    )
     {
         return filter.Operator switch
         {
-            FilterOperator.LessThan => nodes.Where(n => GetProperty(n, filter.Property) < filter.Value),
-            FilterOperator.GreaterThan => nodes.Where(n => GetProperty(n, filter.Property) > filter.Value),
-            FilterOperator.Equals => nodes.Where(n => Math.Abs(GetProperty(n, filter.Property) - filter.Value) < 0.001),
-            _ => nodes
+            FilterOperator.LessThan => nodes.Where(n =>
+                GetProperty(n, filter.Property) < filter.Value
+            ),
+            FilterOperator.GreaterThan => nodes.Where(n =>
+                GetProperty(n, filter.Property) > filter.Value
+            ),
+            FilterOperator.Equals => nodes.Where(n =>
+                Math.Abs(GetProperty(n, filter.Property) - filter.Value) < 0.001
+            ),
+            _ => nodes,
         };
     }
 
@@ -433,26 +484,31 @@ public sealed class InMemoryGraphStore : IGraphStore
             FilterNode.PropertyFilter pf => ApplyPropertyFilter(nodes, pf),
             FilterNode.And and => ApplyAndFilter(nodes, and),
             FilterNode.Or or => ApplyOrFilter(nodes, or),
-            _ => nodes
+            _ => nodes,
         };
     }
 
-    private static double GetProperty(Node node, string property) => property switch
-    {
-        "HealthScore" => node.HealthScore,
-        "FailureProb" => node.FailureProbability,
-        "ResourceStrain" => node.ResourceStrain,
-        "PredictedLatencyMs" => node.PredictedLatencyMs,
-        _ => 0.0
-    };
+    private static double GetProperty(Node node, string property) =>
+        property switch
+        {
+            "HealthScore" => node.HealthScore,
+            "FailureProb" => node.FailureProbability,
+            "ResourceStrain" => node.ResourceStrain,
+            "PredictedLatencyMs" => node.PredictedLatencyMs,
+            _ => 0.0,
+        };
 
-    private static IEnumerable<Node> ApplyOrdering(IEnumerable<Node> nodes, string property, bool descending)
+    private static IEnumerable<Node> ApplyOrdering(
+        IEnumerable<Node> nodes,
+        string property,
+        bool descending
+    )
     {
         var ordered = property switch
         {
             "HealthScore" => nodes.OrderBy(n => n.HealthScore),
             "CreatedAt" => nodes.OrderBy(n => n.ValidFrom),
-            _ => nodes.OrderBy(n => n.HealthScore)
+            _ => nodes.OrderBy(n => n.HealthScore),
         };
 
         return descending ? ordered.ThenByDescending(_ => 0) : ordered;

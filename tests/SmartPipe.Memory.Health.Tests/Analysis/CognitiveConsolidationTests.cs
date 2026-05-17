@@ -25,11 +25,17 @@ public sealed class CognitiveConsolidationTests : IAsyncDisposable
             Title = "Test",
             RelatedNodeIds = new[] { "n1" },
             Confidence = 0.8,
-            Severity = "Warning"
+            Severity = "Warning",
         };
         var existing = new List<Insight>
         {
-            new Insight { Id = "i2", Type = "BottleneckPrediction", RelatedNodeIds = new[] { "n1" }, Confidence = 0.7 }
+            new Insight
+            {
+                Id = "i2",
+                Type = "BottleneckPrediction",
+                RelatedNodeIds = new[] { "n1" },
+                Confidence = 0.7,
+            },
         };
 
         var result = await _consolidation.ConsolidateAsync(insight, existing);
@@ -47,11 +53,19 @@ public sealed class CognitiveConsolidationTests : IAsyncDisposable
             Title = "Test",
             RelatedNodeIds = new[] { "n1" },
             Confidence = 0.8,
-            Severity = "Warning"
+            Severity = "Warning",
         };
         var existing = new List<Insight>();
         for (var i = 0; i < 5; i++)
-            existing.Add(new Insight { Id = $"e{i}", Type = "BottleneckPrediction", RelatedNodeIds = new[] { "n1" }, Confidence = 0.7 });
+            existing.Add(
+                new Insight
+                {
+                    Id = $"e{i}",
+                    Type = "BottleneckPrediction",
+                    RelatedNodeIds = new[] { "n1" },
+                    Confidence = 0.7,
+                }
+            );
 
         var result = await _consolidation.ConsolidateAsync(insight, existing);
 
@@ -64,7 +78,15 @@ public sealed class CognitiveConsolidationTests : IAsyncDisposable
     {
         var all = new List<Insight>();
         for (var i = 0; i < 6; i++)
-            all.Add(new Insight { Id = $"e{i}", Type = "HealthDegradation", RelatedNodeIds = new[] { "n1" }, Confidence = 0.7 });
+            all.Add(
+                new Insight
+                {
+                    Id = $"e{i}",
+                    Type = "HealthDegradation",
+                    RelatedNodeIds = new[] { "n1" },
+                    Confidence = 0.7,
+                }
+            );
 
         var results = await _consolidation.ConsolidateAllByTypeAsync("HealthDegradation", all);
 

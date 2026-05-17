@@ -26,11 +26,33 @@ public sealed class BetweennessCentralityTests
         {
             ["A"] = new Node { Id = "A", Type = "File" },
             ["B"] = new Node { Id = "B", Type = "File" },
-            ["C"] = new Node { Id = "C", Type = "File" }
+            ["C"] = new Node { Id = "C", Type = "File" },
         };
         var edges = new ConcurrentDictionary<string, List<Edge>>();
-        edges.TryAdd("A", new List<Edge> { new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom } });
-        edges.TryAdd("B", new List<Edge> { new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom } });
+        edges.TryAdd(
+            "A",
+            new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "A",
+                    ToNodeId = "B",
+                    Type = EdgeType.DerivedFrom,
+                },
+            }
+        );
+        edges.TryAdd(
+            "B",
+            new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "B",
+                    ToNodeId = "C",
+                    Type = EdgeType.DerivedFrom,
+                },
+            }
+        );
 
         var result = bc.Compute(nodes, edges);
 
@@ -47,11 +69,33 @@ public sealed class BetweennessCentralityTests
         {
             ["A"] = new Node { Id = "A", Type = "File" },
             ["B"] = new Node { Id = "B", Type = "File" },
-            ["C"] = new Node { Id = "C", Type = "File" }
+            ["C"] = new Node { Id = "C", Type = "File" },
         };
         var edges = new ConcurrentDictionary<string, List<Edge>>();
-        edges.TryAdd("A", new List<Edge> { new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom } });
-        edges.TryAdd("B", new List<Edge> { new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom } });
+        edges.TryAdd(
+            "A",
+            new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "A",
+                    ToNodeId = "B",
+                    Type = EdgeType.DerivedFrom,
+                },
+            }
+        );
+        edges.TryAdd(
+            "B",
+            new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "B",
+                    ToNodeId = "C",
+                    Type = EdgeType.DerivedFrom,
+                },
+            }
+        );
 
         var result = bc.ComputeForSubset(nodes, edges, new[] { "A", "B" });
 

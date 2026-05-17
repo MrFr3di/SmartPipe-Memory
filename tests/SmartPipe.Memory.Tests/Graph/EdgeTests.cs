@@ -11,7 +11,7 @@ public sealed class EdgeTests
         {
             FromNodeId = "n1",
             ToNodeId = "n2",
-            Type = EdgeType.DerivedFrom
+            Type = EdgeType.DerivedFrom,
         };
 
         Assert.Equal("n1", edge.FromNodeId);
@@ -31,7 +31,7 @@ public sealed class EdgeTests
         var steps = new List<TransformationStep>
         {
             new("FileHasher", DateTime.UtcNow.AddSeconds(-5), TimeSpan.FromMilliseconds(12), null),
-            new("DuplicateDetector", DateTime.UtcNow, TimeSpan.FromMilliseconds(8), null)
+            new("DuplicateDetector", DateTime.UtcNow, TimeSpan.FromMilliseconds(8), null),
         };
 
         var edge = new Edge
@@ -39,7 +39,7 @@ public sealed class EdgeTests
             FromNodeId = "n1",
             ToNodeId = "n2",
             Type = EdgeType.DuplicateOf,
-            Steps = steps
+            Steps = steps,
         };
 
         Assert.Equal(2, edge.Steps.Count);
@@ -60,7 +60,7 @@ public sealed class EdgeTests
         {
             FromNodeId = "n1",
             ToNodeId = "n2",
-            Type = type
+            Type = type,
         };
 
         Assert.Equal(type, edge.Type);
@@ -75,7 +75,7 @@ public sealed class EdgeTests
             FromNodeId = "n1",
             ToNodeId = "n2",
             Type = EdgeType.DerivedFrom,
-            Weight = 1.0
+            Weight = 1.0,
         };
 
         edge.Weight = 0.5;
@@ -97,7 +97,7 @@ public sealed class EdgeTests
             ToNodeId = "n2",
             Type = EdgeType.DerivedFrom,
             ValidFrom = past,
-            ValidTo = now
+            ValidTo = now,
         };
 
         Assert.Equal(past, edge.ValidFrom);
@@ -112,7 +112,7 @@ public sealed class EdgeTests
         {
             FromNodeId = "n1",
             ToNodeId = "n2",
-            Type = EdgeType.DerivedFrom
+            Type = EdgeType.DerivedFrom,
         };
 
         Assert.Equal(1.0, edge.Confidence);

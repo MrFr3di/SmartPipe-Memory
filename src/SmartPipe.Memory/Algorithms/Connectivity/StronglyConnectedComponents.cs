@@ -17,7 +17,8 @@ public static class StronglyConnectedComponents
     /// <returns>List of SCCs, each represented as a list of node identifiers.</returns>
     public static List<List<string>> Find(
         IReadOnlyDictionary<string, Node> nodes,
-        IReadOnlyDictionary<string, IReadOnlyList<Edge>> outEdges)
+        IReadOnlyDictionary<string, IReadOnlyList<Edge>> outEdges
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -39,7 +40,8 @@ public static class StronglyConnectedComponents
         // Итеративный обход всех вершин
         foreach (var startNode in nodes.Keys)
         {
-            if (indexMap[startNode] != -1) continue;
+            if (indexMap[startNode] != -1)
+                continue;
 
             var callStack = new Stack<(string node, int step, IEnumerator<Edge>? enumerator)>();
             callStack.Push((startNode, 0, null));
@@ -105,7 +107,10 @@ public static class StronglyConnectedComponents
                             var parentFrame = callStack.Peek();
                             if (parentFrame.step == 1 && parentFrame.node != node)
                             {
-                                lowLink[parentFrame.node] = Math.Min(lowLink[parentFrame.node], lowLink[node]);
+                                lowLink[parentFrame.node] = Math.Min(
+                                    lowLink[parentFrame.node],
+                                    lowLink[node]
+                                );
                             }
                         }
 

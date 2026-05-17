@@ -26,7 +26,8 @@ public sealed class LeidenClusterer
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
         int maxIterations = 10,
         double minImprovement = 0.001,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(edges);
@@ -41,11 +42,13 @@ public sealed class LeidenClusterer
             ct.ThrowIfCancellationRequested();
 
             var improved = LocalMovingPhase(communities, edges, totalWeight);
-            if (!improved) break;
+            if (!improved)
+                break;
 
             var newQuality = ComputeModularity(communities, edges, totalWeight);
 
-            if (newQuality - CurrentQuality < minImprovement) break;
+            if (newQuality - CurrentQuality < minImprovement)
+                break;
 
             CurrentQuality = newQuality;
         }
@@ -54,7 +57,8 @@ public sealed class LeidenClusterer
     }
 
     private static Dictionary<string, int> InitializeCommunities(
-        IReadOnlyDictionary<string, Graph.Node> nodes)
+        IReadOnlyDictionary<string, Graph.Node> nodes
+    )
     {
         var communities = new Dictionary<string, int>();
         var id = 0;
@@ -66,7 +70,8 @@ public sealed class LeidenClusterer
     }
 
     private static double ComputeTotalWeight(
-        IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges)
+        IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges
+    )
     {
         var total = 0.0;
 
@@ -82,7 +87,8 @@ public sealed class LeidenClusterer
     private static bool LocalMovingPhase(
         Dictionary<string, int> communities,
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
-        double totalWeight)
+        double totalWeight
+    )
     {
         var totalWeight2M = 2.0 * totalWeight;
         var improved = false;
@@ -105,7 +111,13 @@ public sealed class LeidenClusterer
             foreach (var targetCommunity in neighborCommunities)
             {
                 var delta = ComputeDeltaModularity(
-                    communities, edges, totalWeight2M, nodeId, currentCommunity, targetCommunity);
+                    communities,
+                    edges,
+                    totalWeight2M,
+                    nodeId,
+                    currentCommunity,
+                    targetCommunity
+                );
 
                 if (delta > bestDelta)
                 {
@@ -130,7 +142,8 @@ public sealed class LeidenClusterer
         double totalWeight2M,
         string nodeId,
         int fromCommunity,
-        int toCommunity)
+        int toCommunity
+    )
     {
         var ki = ComputeNodeWeight(edges, nodeId);
         var kiIn = ComputeWeightToCommunity(edges, communities, nodeId, fromCommunity);
@@ -141,7 +154,9 @@ public sealed class LeidenClusterer
     }
 
     private static double ComputeNodeWeight(
-        IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges, string nodeId)
+        IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
+        string nodeId
+    )
     {
         if (!edges.TryGetValue(nodeId, out var outgoing))
             return 0.0;
@@ -153,7 +168,8 @@ public sealed class LeidenClusterer
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
         Dictionary<string, int> communities,
         string nodeId,
-        int community)
+        int community
+    )
     {
         if (!edges.TryGetValue(nodeId, out var outgoing))
             return 0.0;
@@ -166,13 +182,15 @@ public sealed class LeidenClusterer
     private static double ComputeCommunityWeight(
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
         Dictionary<string, int> communities,
-        int community)
+        int community
+    )
     {
         var total = 0.0;
 
         foreach (var (nodeId, commId) in communities)
         {
-            if (commId != community) continue;
+            if (commId != community)
+                continue;
 
             if (edges.TryGetValue(nodeId, out var outgoing))
                 total += outgoing.Sum(e => e.Weight);
@@ -184,9 +202,11 @@ public sealed class LeidenClusterer
     private static double ComputeModularity(
         Dictionary<string, int> communities,
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
-        double totalWeight)
+        double totalWeight
+    )
     {
-        if (totalWeight == 0.0) return 0.0;
+        if (totalWeight == 0.0)
+            return 0.0;
 
         var totalWeight2M = 2.0 * totalWeight;
         var modularity = 0.0;
@@ -195,7 +215,10 @@ public sealed class LeidenClusterer
 
         foreach (var community in communitySet)
         {
-            var communityNodes = communities.Where(c => c.Value == community).Select(c => c.Key).ToList();
+            var communityNodes = communities
+                .Where(c => c.Value == community)
+                .Select(c => c.Key)
+                .ToList();
             var eii = ComputeInternalEdges(edges, communities, community);
             var ai = ComputeCommunityDegree(edges, communities, community) / totalWeight2M;
 
@@ -208,14 +231,17 @@ public sealed class LeidenClusterer
     private static double ComputeInternalEdges(
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
         Dictionary<string, int> communities,
-        int community)
+        int community
+    )
     {
         var total = 0.0;
 
         foreach (var (nodeId, commId) in communities)
         {
-            if (commId != community) continue;
-            if (!edges.TryGetValue(nodeId, out var outgoing)) continue;
+            if (commId != community)
+                continue;
+            if (!edges.TryGetValue(nodeId, out var outgoing))
+                continue;
 
             total += outgoing
                 .Where(e => communities.TryGetValue(e.ToNodeId, out var c) && c == community)
@@ -228,14 +254,17 @@ public sealed class LeidenClusterer
     private static double ComputeCommunityDegree(
         IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> edges,
         Dictionary<string, int> communities,
-        int community)
+        int community
+    )
     {
         var total = 0.0;
 
         foreach (var (nodeId, commId) in communities)
         {
-            if (commId != community) continue;
-            if (!edges.TryGetValue(nodeId, out var outgoing)) continue;
+            if (commId != community)
+                continue;
+            if (!edges.TryGetValue(nodeId, out var outgoing))
+                continue;
 
             total += outgoing.Sum(e => e.Weight);
         }
@@ -245,7 +274,8 @@ public sealed class LeidenClusterer
 
     private IReadOnlyList<Graph.Cluster> BuildClusters(
         Dictionary<string, int> communities,
-        IEnumerable<string> nodeIds)
+        IEnumerable<string> nodeIds
+    )
     {
         var clusters = new Dictionary<int, List<string>>();
 
@@ -260,12 +290,14 @@ public sealed class LeidenClusterer
             clusters[community].Add(nodeId);
         }
 
-        return clusters.Select(kvp => new Graph.Cluster
-        {
-            Id = kvp.Key.ToString(),
-            NodeIds = kvp.Value,
-            Modularity = CurrentQuality,
-            ComputedAt = DateTime.UtcNow
-        }).ToList();
+        return clusters
+            .Select(kvp => new Graph.Cluster
+            {
+                Id = kvp.Key.ToString(),
+                NodeIds = kvp.Value,
+                Modularity = CurrentQuality,
+                ComputedAt = DateTime.UtcNow,
+            })
+            .ToList();
     }
 }

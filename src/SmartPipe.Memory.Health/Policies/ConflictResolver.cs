@@ -33,7 +33,11 @@ public sealed class ConflictResolver
     /// <param name="existingEdge">The existing edge to weaken.</param>
     /// <param name="store">Graph store to update the edge.</param>
     /// <param name="ct">Cancellation token.</param>
-    public async Task ResolveAsync(Edge existingEdge, IGraphStore store, CancellationToken ct = default)
+    public async Task ResolveAsync(
+        Edge existingEdge,
+        IGraphStore store,
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(existingEdge);
         ArgumentNullException.ThrowIfNull(store);
@@ -49,7 +53,7 @@ public sealed class ConflictResolver
             SourceType = existingEdge.SourceType,
             Steps = existingEdge.Steps,
             ValidFrom = existingEdge.ValidFrom,
-            ValidTo = _clock.UtcNow
+            ValidTo = _clock.UtcNow,
         };
 
         await store.UpsertEdgeAsync(weakenedEdge, ct);

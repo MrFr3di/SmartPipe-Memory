@@ -11,7 +11,8 @@ public static class SqliteSchema
     /// Complete DDL for creating tables, indexes, and views.
     /// Idempotent — uses IF NOT EXISTS.
     /// </summary>
-    public const string CreateTables = @"
+    public const string CreateTables =
+        @"
         PRAGMA journal_mode = WAL;
         PRAGMA foreign_keys = ON;
         PRAGMA cache_size = -64000;

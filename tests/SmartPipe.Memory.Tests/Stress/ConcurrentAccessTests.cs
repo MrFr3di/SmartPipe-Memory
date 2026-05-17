@@ -19,14 +19,16 @@ public sealed class ConcurrentAccessTests : IAsyncDisposable
         for (var i = 0; i < 1000; i++)
             await _store.UpsertNodeAsync(new Node { Id = $"n{i}", Type = "File" });
 
-        var tasks = Enumerable.Range(0, 100).Select(async _ =>
-        {
-            for (var i = 0; i < 1000; i++)
+        var tasks = Enumerable
+            .Range(0, 100)
+            .Select(async _ =>
             {
-                var node = await _store.GetNodeAsync($"n{i}");
-                Assert.NotNull(node);
-            }
-        });
+                for (var i = 0; i < 1000; i++)
+                {
+                    var node = await _store.GetNodeAsync($"n{i}");
+                    Assert.NotNull(node);
+                }
+            });
 
         await Task.WhenAll(tasks);
     }
@@ -34,13 +36,17 @@ public sealed class ConcurrentAccessTests : IAsyncDisposable
     [Fact]
     public async Task Parallel_Writes_NoDeadlock()
     {
-        await Task.WhenAll(Enumerable.Range(0, 10).Select(async i =>
-        {
-            for (var j = 0; j < 100; j++)
-            {
-                await _store.UpsertNodeAsync(new Node { Id = $"n{i}_{j}", Type = "File" });
-            }
-        }));
+        await Task.WhenAll(
+            Enumerable
+                .Range(0, 10)
+                .Select(async i =>
+                {
+                    for (var j = 0; j < 100; j++)
+                    {
+                        await _store.UpsertNodeAsync(new Node { Id = $"n{i}_{j}", Type = "File" });
+                    }
+                })
+        );
     }
 
     [Fact]

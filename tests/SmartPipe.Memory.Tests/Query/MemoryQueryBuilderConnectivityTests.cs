@@ -26,8 +26,22 @@ public sealed class MemoryQueryBuilderConnectivityTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "C", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "B",
+                ToNodeId = "C",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         var result = _builder.TopologicalSort();
         Assert.Equal(new[] { "A", "B", "C" }, result.Sorted);
@@ -40,9 +54,30 @@ public sealed class MemoryQueryBuilderConnectivityTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "C", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "C", ToNodeId = "A", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "B",
+                ToNodeId = "C",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "C",
+                ToNodeId = "A",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         Assert.True(_builder.HasCycles());
     }
@@ -53,9 +88,30 @@ public sealed class MemoryQueryBuilderConnectivityTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "A", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "C", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "B", ToNodeId = "C", Type = EdgeType.DerivedFrom });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "C", ToNodeId = "A", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "B",
+                ToNodeId = "C",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "C",
+                ToNodeId = "A",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         var components = _builder.FindSCC();
         Assert.Single(components);
@@ -69,8 +125,22 @@ public sealed class MemoryQueryBuilderConnectivityTests : IAsyncDisposable
         await _store.UpsertNodeAsync(new Node { Id = "B", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "C", Type = "File" });
         await _store.UpsertNodeAsync(new Node { Id = "D", Type = "File" });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom });
-        await _store.UpsertEdgeAsync(new Edge { FromNodeId = "C", ToNodeId = "D", Type = EdgeType.DerivedFrom });
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "A",
+                ToNodeId = "B",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
+        await _store.UpsertEdgeAsync(
+            new Edge
+            {
+                FromNodeId = "C",
+                ToNodeId = "D",
+                Type = EdgeType.DerivedFrom,
+            }
+        );
 
         var components = _builder.FindWCC();
         Assert.Equal(2, components.Count);

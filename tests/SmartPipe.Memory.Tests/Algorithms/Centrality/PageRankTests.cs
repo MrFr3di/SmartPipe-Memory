@@ -25,11 +25,33 @@ public sealed class PageRankTests
         var nodes = new Dictionary<string, Node>
         {
             ["A"] = new Node { Id = "A", Type = "File" },
-            ["B"] = new Node { Id = "B", Type = "File" }
+            ["B"] = new Node { Id = "B", Type = "File" },
         };
         var edges = new ConcurrentDictionary<string, List<Edge>>();
-        edges.TryAdd("A", new List<Edge> { new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom } });
-        edges.TryAdd("B", new List<Edge> { new Edge { FromNodeId = "B", ToNodeId = "A", Type = EdgeType.DerivedFrom } });
+        edges.TryAdd(
+            "A",
+            new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "A",
+                    ToNodeId = "B",
+                    Type = EdgeType.DerivedFrom,
+                },
+            }
+        );
+        edges.TryAdd(
+            "B",
+            new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "B",
+                    ToNodeId = "A",
+                    Type = EdgeType.DerivedFrom,
+                },
+            }
+        );
 
         var result = pagerank.Compute(nodes, edges);
 
@@ -44,10 +66,21 @@ public sealed class PageRankTests
         var nodes = new Dictionary<string, Node>
         {
             ["A"] = new Node { Id = "A", Type = "File" },
-            ["B"] = new Node { Id = "B", Type = "File" }
+            ["B"] = new Node { Id = "B", Type = "File" },
         };
         var edges = new ConcurrentDictionary<string, List<Edge>>();
-        edges.TryAdd("A", new List<Edge> { new Edge { FromNodeId = "A", ToNodeId = "B", Type = EdgeType.DerivedFrom } });
+        edges.TryAdd(
+            "A",
+            new List<Edge>
+            {
+                new Edge
+                {
+                    FromNodeId = "A",
+                    ToNodeId = "B",
+                    Type = EdgeType.DerivedFrom,
+                },
+            }
+        );
 
         var result = pagerank.Compute(nodes, edges);
 
@@ -68,7 +101,15 @@ public sealed class PageRankTests
             edges.TryAdd($"{i}", new List<Edge>());
         }
         for (var i = 0; i < 9; i++)
-            edges[$"{i}"].Add(new Edge { FromNodeId = $"{i}", ToNodeId = $"{i + 1}", Type = EdgeType.DerivedFrom });
+            edges[$"{i}"]
+                .Add(
+                    new Edge
+                    {
+                        FromNodeId = $"{i}",
+                        ToNodeId = $"{i + 1}",
+                        Type = EdgeType.DerivedFrom,
+                    }
+                );
 
         var result1 = pagerank.Compute(nodes, edges, maxIterations: 50);
         var result2 = pagerank.Compute(nodes, edges, maxIterations: 100);

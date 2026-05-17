@@ -1,5 +1,5 @@
-using SmartPipe.Memory.Graph;
 using SmartPipe.Memory.Algorithms.Classification;
+using SmartPipe.Memory.Graph;
 
 namespace SmartPipe.Memory.Health.Tests.Analysis;
 
@@ -17,8 +17,8 @@ public sealed class AutoClassifierTests
             Properties = new Dictionary<string, object>
             {
                 ["hash"] = "abc123",
-                ["path"] = "/docs/file.txt"
-            }
+                ["path"] = "/docs/file.txt",
+            },
         };
 
         var result = _classifier.Classify(node);
@@ -36,8 +36,8 @@ public sealed class AutoClassifierTests
             Properties = new Dictionary<string, object>
             {
                 ["sql"] = "SELECT * FROM table",
-                ["connectionString"] = "..."
-            }
+                ["connectionString"] = "...",
+            },
         };
 
         var result = _classifier.Classify(node);
@@ -48,7 +48,12 @@ public sealed class AutoClassifierTests
     [Fact]
     public void Classify_NoMatchingProperties_ReturnsUnknown()
     {
-        var node = new Node { Id = "x1", Type = "", Properties = new Dictionary<string, object>() };
+        var node = new Node
+        {
+            Id = "x1",
+            Type = "",
+            Properties = new Dictionary<string, object>(),
+        };
 
         var result = _classifier.Classify(node);
 
@@ -69,8 +74,14 @@ public sealed class AutoClassifierTests
     [Fact]
     public void ClassifyEdge_SimilarNames_ReturnsVersionOf()
     {
-        var from = new Node { Properties = new Dictionary<string, object> { ["path"] = "/docs/report_v1.pdf" } };
-        var to = new Node { Properties = new Dictionary<string, object> { ["path"] = "/docs/report_v2.pdf" } };
+        var from = new Node
+        {
+            Properties = new Dictionary<string, object> { ["path"] = "/docs/report_v1.pdf" },
+        };
+        var to = new Node
+        {
+            Properties = new Dictionary<string, object> { ["path"] = "/docs/report_v2.pdf" },
+        };
 
         var result = _classifier.ClassifyEdge(from, to);
 

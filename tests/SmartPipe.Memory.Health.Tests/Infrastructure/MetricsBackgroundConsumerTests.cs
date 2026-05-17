@@ -17,10 +17,9 @@ public sealed class MetricsBackgroundConsumerTests : IAsyncDisposable
         _store = new InMemoryGraphStore();
         var clock = new TimeProviderClock();
         _calculator = new HealthVectorCalculator(_store, clock);
-        _channel = Channel.CreateBounded<MetricsEntry>(new BoundedChannelOptions(100)
-        {
-            FullMode = BoundedChannelFullMode.DropOldest
-        });
+        _channel = Channel.CreateBounded<MetricsEntry>(
+            new BoundedChannelOptions(100) { FullMode = BoundedChannelFullMode.DropOldest }
+        );
     }
 
     [Fact]
@@ -32,17 +31,19 @@ public sealed class MetricsBackgroundConsumerTests : IAsyncDisposable
 
         await consumer.StartAsync();
 
-        await _channel.Writer.WriteAsync(new MetricsEntry
-        {
-            NodeId = "n1",
-            Timestamp = DateTime.UtcNow,
-            Values = new Dictionary<string, double>
+        await _channel.Writer.WriteAsync(
+            new MetricsEntry
             {
-                ["AvgLatencyMs"] = 100,
-                ["SmoothThroughput"] = 50,
-                ["ItemsFailed"] = 0
+                NodeId = "n1",
+                Timestamp = DateTime.UtcNow,
+                Values = new Dictionary<string, double>
+                {
+                    ["AvgLatencyMs"] = 100,
+                    ["SmoothThroughput"] = 50,
+                    ["ItemsFailed"] = 0,
+                },
             }
-        });
+        );
 
         // Give consumer time to process
         await Task.Delay(100);
@@ -65,12 +66,14 @@ public sealed class MetricsBackgroundConsumerTests : IAsyncDisposable
 
         for (var i = 0; i < 5; i++)
         {
-            await _channel.Writer.WriteAsync(new MetricsEntry
-            {
-                NodeId = "n1",
-                Timestamp = DateTime.UtcNow,
-                Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 + i * 10 }
-            });
+            await _channel.Writer.WriteAsync(
+                new MetricsEntry
+                {
+                    NodeId = "n1",
+                    Timestamp = DateTime.UtcNow,
+                    Values = new Dictionary<string, double> { ["AvgLatencyMs"] = 100 + i * 10 },
+                }
+            );
         }
 
         await Task.Delay(200);

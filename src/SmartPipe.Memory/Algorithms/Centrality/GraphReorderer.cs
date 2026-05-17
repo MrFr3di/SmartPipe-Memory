@@ -14,7 +14,8 @@ public sealed class GraphReorderer
     /// <returns>Reordered list of nodes.</returns>
     public IReadOnlyList<Graph.Node> ReorderByCommunity(
         IReadOnlyList<Graph.Node> nodes,
-        IReadOnlyList<Graph.Cluster> clusters)
+        IReadOnlyList<Graph.Cluster> clusters
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(clusters);
@@ -40,7 +41,8 @@ public sealed class GraphReorderer
     /// <returns>Reordered list of nodes.</returns>
     public IReadOnlyList<Graph.Node> ReorderByDegree(
         IReadOnlyList<Graph.Node> nodes,
-        IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> outEdges)
+        IReadOnlyDictionary<string, IReadOnlyList<Graph.Edge>> outEdges
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -59,8 +61,6 @@ public sealed class GraphReorderer
     {
         ArgumentNullException.ThrowIfNull(nodes);
 
-        return nodes
-            .OrderByDescending(n => n.HealthScore)
-            .ToList();
+        return nodes.OrderByDescending(n => n.HealthScore).ToList();
     }
 }

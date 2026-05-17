@@ -11,7 +11,7 @@ public sealed class FilterNodeTests
         {
             Property = "HealthScore",
             Operator = FilterOperator.LessThan,
-            Value = 0.5
+            Value = 0.5,
         };
 
         Assert.Equal("HealthScore", filter.Property);
@@ -27,13 +27,13 @@ public sealed class FilterNodeTests
         {
             Property = "HealthScore",
             Operator = FilterOperator.LessThan,
-            Value = 0.5
+            Value = 0.5,
         };
         var right = new FilterNode.PropertyFilter
         {
             Property = "FailureProb",
             Operator = FilterOperator.GreaterThan,
-            Value = 0.1
+            Value = 0.1,
         };
 
         var combined = new FilterNode.And(left, right);
@@ -50,13 +50,13 @@ public sealed class FilterNodeTests
         {
             Property = "HealthScore",
             Operator = FilterOperator.LessThan,
-            Value = 0.5
+            Value = 0.5,
         };
         var right = new FilterNode.PropertyFilter
         {
             Property = "ResourceStrain",
             Operator = FilterOperator.GreaterThan,
-            Value = 0.7
+            Value = 0.7,
         };
 
         var combined = new FilterNode.Or(left, right);
@@ -73,7 +73,7 @@ public sealed class FilterNodeTests
         {
             Property = "HealthScore",
             Operator = FilterOperator.LessThan,
-            Value = 0.5
+            Value = 0.5,
         };
 
         Assert.Throws<ArgumentNullException>(() => new FilterNode.And(null!, right));
@@ -86,7 +86,7 @@ public sealed class FilterNodeTests
         {
             Property = "HealthScore",
             Operator = FilterOperator.LessThan,
-            Value = 0.5
+            Value = 0.5,
         };
 
         Assert.Throws<ArgumentNullException>(() => new FilterNode.Or(left, null!));
@@ -97,15 +97,21 @@ public sealed class FilterNodeTests
     {
         var health = new FilterNode.PropertyFilter
         {
-            Property = "HealthScore", Operator = FilterOperator.LessThan, Value = 0.5
+            Property = "HealthScore",
+            Operator = FilterOperator.LessThan,
+            Value = 0.5,
         };
         var failure = new FilterNode.PropertyFilter
         {
-            Property = "FailureProb", Operator = FilterOperator.GreaterThan, Value = 0.1
+            Property = "FailureProb",
+            Operator = FilterOperator.GreaterThan,
+            Value = 0.1,
         };
         var latency = new FilterNode.PropertyFilter
         {
-            Property = "PredictedLatencyMs", Operator = FilterOperator.GreaterThan, Value = 200
+            Property = "PredictedLatencyMs",
+            Operator = FilterOperator.GreaterThan,
+            Value = 200,
         };
 
         var nested = new FilterNode.And(health, new FilterNode.Or(failure, latency));

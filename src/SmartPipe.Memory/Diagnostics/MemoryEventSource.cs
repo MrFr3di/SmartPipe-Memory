@@ -25,24 +25,25 @@ public sealed class MemoryEventSource : EventSource
     private MemoryEventSource()
     {
         _queriesPerSecondCounter = new IncrementingPollingCounter(
-            "queries-per-second", this, () => _queriesPerSecond)
+            "queries-per-second",
+            this,
+            () => _queriesPerSecond
+        )
         {
             DisplayName = "Queries per second",
-            DisplayUnits = "ops/sec"
+            DisplayUnits = "ops/sec",
         };
 
-        _nodesTotalCounter = new PollingCounter(
-            "nodes-total", this, () => _nodesTotal)
+        _nodesTotalCounter = new PollingCounter("nodes-total", this, () => _nodesTotal)
         {
             DisplayName = "Total nodes",
-            DisplayUnits = "nodes"
+            DisplayUnits = "nodes",
         };
 
-        _cacheHitRateCounter = new PollingCounter(
-            "cache-hit-rate", this, () => _cacheHitRate)
+        _cacheHitRateCounter = new PollingCounter("cache-hit-rate", this, () => _cacheHitRate)
         {
             DisplayName = "Cache hit rate",
-            DisplayUnits = "%"
+            DisplayUnits = "%",
         };
     }
 

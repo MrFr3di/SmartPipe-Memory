@@ -18,11 +18,9 @@ public sealed class UseMemoryTests : IAsyncDisposable
     [Fact]
     public async Task UseMemory_RegistersPipelineTopology_OnRun()
     {
-        var pipeline = new SmartPipeChannel<TestInput, TestOutput>(new SmartPipeChannelOptions
-        {
-            MaxDegreeOfParallelism = 1,
-            ContinueOnError = true
-        });
+        var pipeline = new SmartPipeChannel<TestInput, TestOutput>(
+            new SmartPipeChannelOptions { MaxDegreeOfParallelism = 1, ContinueOnError = true }
+        );
 
         pipeline.AddSource(new TestSource(new TestInput { Data = "test" }));
         pipeline.AddTransformer(new TestTransformer());
@@ -39,11 +37,9 @@ public sealed class UseMemoryTests : IAsyncDisposable
     [Fact]
     public async Task UseMemory_StreamsMetrics_ToStore()
     {
-        var pipeline = new SmartPipeChannel<TestInput, TestOutput>(new SmartPipeChannelOptions
-        {
-            MaxDegreeOfParallelism = 1,
-            ContinueOnError = true
-        });
+        var pipeline = new SmartPipeChannel<TestInput, TestOutput>(
+            new SmartPipeChannelOptions { MaxDegreeOfParallelism = 1, ContinueOnError = true }
+        );
 
         pipeline.AddSource(new TestSource(new TestInput { Data = "test" }));
         pipeline.AddTransformer(new TestTransformer());
@@ -86,13 +82,15 @@ public sealed class UseMemoryTests : IAsyncDisposable
         {
             Id = result.Id,
             Type = "File",
-            Label = result.Name
+            Label = result.Name,
         });
 
         await sink.InitializeAsync(CancellationToken.None);
 
         var result = ProcessingResult<TestOutput>.Success(
-            new TestOutput { Id = "n1", Name = "test.txt" }, 1);
+            new TestOutput { Id = "n1", Name = "test.txt" },
+            1
+        );
 
         await sink.WriteAsync(result, CancellationToken.None);
 
@@ -111,12 +109,14 @@ public sealed class UseMemoryTests : IAsyncDisposable
         {
             FromNodeId = "n1",
             ToNodeId = item.Id,
-            Type = EdgeType.DerivedFrom
+            Type = EdgeType.DerivedFrom,
         });
 
         await transformer.InitializeAsync(CancellationToken.None);
 
-        var ctx = new ProcessingContext<TestOutput>(new TestOutput { Id = "n2", Name = "derived.txt" });
+        var ctx = new ProcessingContext<TestOutput>(
+            new TestOutput { Id = "n2", Name = "derived.txt" }
+        );
         var result = await transformer.TransformAsync(ctx, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -128,12 +128,14 @@ public sealed class UseMemoryTests : IAsyncDisposable
     private sealed class TestSource : ISource<TestInput>
     {
         private readonly TestInput[] _items;
+
         public TestSource(params TestInput[] items) => _items = items;
 
         public Task InitializeAsync(CancellationToken ct) => Task.CompletedTask;
 
         public async IAsyncEnumerable<ProcessingContext<TestInput>> ReadAsync(
-            [EnumeratorCancellation] CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct
+        )
         {
             foreach (var item in _items)
             {
@@ -150,7 +152,9 @@ public sealed class UseMemoryTests : IAsyncDisposable
         public Task InitializeAsync(CancellationToken ct) => Task.CompletedTask;
 
         public ValueTask<ProcessingResult<TestOutput>> TransformAsync(
-            ProcessingContext<TestInput> ctx, CancellationToken ct)
+            ProcessingContext<TestInput> ctx,
+            CancellationToken ct
+        )
         {
             var output = new TestOutput { Id = "out", Name = ctx.Payload.Data };
             return ValueTask.FromResult(ProcessingResult<TestOutput>.Success(output, ctx.TraceId));
@@ -162,7 +166,10 @@ public sealed class UseMemoryTests : IAsyncDisposable
     private sealed class TestSink : ISink<TestOutput>
     {
         public Task InitializeAsync(CancellationToken ct) => Task.CompletedTask;
-        public Task WriteAsync(ProcessingResult<TestOutput> result, CancellationToken ct) => Task.CompletedTask;
+
+        public Task WriteAsync(ProcessingResult<TestOutput> result, CancellationToken ct) =>
+            Task.CompletedTask;
+
         public Task DisposeAsync() => Task.CompletedTask;
     }
 

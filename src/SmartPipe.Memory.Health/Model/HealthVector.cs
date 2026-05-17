@@ -64,12 +64,22 @@ public sealed record HealthVector
         double p50LatencyMs,
         double p95LatencyMs,
         double p99LatencyMs,
-        int retryBudget = 3)
+        int retryBudget = 3
+    )
     {
         return CreateWithWeights(
-            predictedLatencyMs, smoothThroughput, failureProbability, resourceStrain,
-            p50LatencyMs, p95LatencyMs, p99LatencyMs, retryBudget,
-            failureWeight: 0.35, latencyWeight: 0.35, strainWeight: 0.30);
+            predictedLatencyMs,
+            smoothThroughput,
+            failureProbability,
+            resourceStrain,
+            p50LatencyMs,
+            p95LatencyMs,
+            p99LatencyMs,
+            retryBudget,
+            failureWeight: 0.35,
+            latencyWeight: 0.35,
+            strainWeight: 0.30
+        );
     }
 
     /// <summary>
@@ -89,13 +99,20 @@ public sealed record HealthVector
         int retryBudget,
         double failureWeight,
         double latencyWeight,
-        double strainWeight)
+        double strainWeight
+    )
     {
         if (Math.Abs(failureWeight + latencyWeight + strainWeight - 1.0) > 1e-6)
             throw new ArgumentException("Weights must sum to 1.0");
 
         var latencyComponent = Math.Min(predictedLatencyMs / 1000.0, 1.0);
-        var healthScore = 1.0 - (failureWeight * failureProbability + latencyWeight * latencyComponent + strainWeight * resourceStrain);
+        var healthScore =
+            1.0
+            - (
+                failureWeight * failureProbability
+                + latencyWeight * latencyComponent
+                + strainWeight * resourceStrain
+            );
 
         return new HealthVector
         {
@@ -107,7 +124,7 @@ public sealed record HealthVector
             P95LatencyMs = p95LatencyMs,
             P99LatencyMs = p99LatencyMs,
             HealthScore = Math.Clamp(healthScore, 0.0, 1.0),
-            RetryBudget = retryBudget
+            RetryBudget = retryBudget,
         };
     }
 }

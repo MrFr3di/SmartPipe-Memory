@@ -42,26 +42,31 @@ public sealed class MemoryMetrics
 
         _nodesTotal = _meter.CreateUpDownCounter<long>(
             "memory.nodes.total",
-            description: "Total number of nodes in the graph");
+            description: "Total number of nodes in the graph"
+        );
 
         _edgesTotal = _meter.CreateUpDownCounter<long>(
             "memory.edges.total",
-            description: "Total number of edges in the graph");
+            description: "Total number of edges in the graph"
+        );
 
         _queriesExecuted = _meter.CreateCounter<long>(
             "memory.queries.executed",
-            description: "Number of queries executed");
+            description: "Number of queries executed"
+        );
 
         // ObservableGauge does not need to be stored – Meter keeps it alive.
         _meter.CreateObservableGauge(
             "memory.cache.hit_rate",
             () => ComputeCacheHitRate(),
-            description: "Cache hit rate (0..1)");
+            description: "Cache hit rate (0..1)"
+        );
 
         _storeLatencyMs = _meter.CreateHistogram<double>(
             "memory.store.latency_ms",
             unit: "ms",
-            description: "Store operation latency in milliseconds");
+            description: "Store operation latency in milliseconds"
+        );
     }
 
     /// <summary>
@@ -104,5 +109,4 @@ public sealed class MemoryMetrics
         var total = hits + misses;
         return total == 0 ? 0.0 : (double)hits / total;
     }
-
 }

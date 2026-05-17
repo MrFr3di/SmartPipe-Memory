@@ -28,7 +28,8 @@ public sealed class PageRank
         double damping = DefaultDamping,
         double tolerance = DefaultTolerance,
         int maxIterations = DefaultMaxIterations,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(outEdges);
@@ -61,7 +62,9 @@ public sealed class PageRank
                     {
                         if (edge.ToNodeId == nodeId)
                         {
-                            var outDegree = outEdges.TryGetValue(edge.FromNodeId, out var fromEdges) ? fromEdges.Count : 1;
+                            var outDegree = outEdges.TryGetValue(edge.FromNodeId, out var fromEdges)
+                                ? fromEdges.Count
+                                : 1;
                             sum += ranks.GetValueOrDefault(edge.FromNodeId, 0) / outDegree;
                         }
                     }
@@ -71,7 +74,8 @@ public sealed class PageRank
                 newRanks[nodeId] = newRank;
 
                 var diff = Math.Abs(newRank - ranks.GetValueOrDefault(nodeId, 0));
-                if (diff > maxDiff) maxDiff = diff;
+                if (diff > maxDiff)
+                    maxDiff = diff;
             }
 
             (ranks, newRanks) = (newRanks, ranks);
@@ -92,11 +96,13 @@ public sealed class PageRank
         double damping = DefaultDamping,
         double tolerance = DefaultTolerance,
         int maxIterations = DefaultMaxIterations,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         var edgesAsReadOnly = outEdges.ToDictionary(
             kvp => kvp.Key,
-            kvp => (IReadOnlyList<Graph.Edge>)kvp.Value);
+            kvp => (IReadOnlyList<Graph.Edge>)kvp.Value
+        );
 
         return Compute(nodes, edgesAsReadOnly, damping, tolerance, maxIterations, ct);
     }

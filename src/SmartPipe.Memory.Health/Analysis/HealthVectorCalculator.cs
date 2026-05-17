@@ -36,7 +36,8 @@ public sealed class HealthVectorCalculator
         string nodeId,
         IReadOnlyList<MetricsEntry> metricHistory,
         int retryBudget = 3,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         ArgumentException.ThrowIfNullOrEmpty(nodeId);
         ArgumentNullException.ThrowIfNull(metricHistory);
@@ -83,7 +84,8 @@ public sealed class HealthVectorCalculator
             latencyHistogram.GetPercentile(50),
             latencyHistogram.GetPercentile(95),
             latencyHistogram.GetPercentile(99),
-            retryBudget);
+            retryBudget
+        );
     }
 
     /// <summary>
@@ -93,7 +95,8 @@ public sealed class HealthVectorCalculator
         string nodeId,
         MetricsEntry snapshot,
         int retryBudget = 3,
-        CancellationToken ct = default)
+        CancellationToken ct = default
+    )
     {
         return ComputeAsync(nodeId, new[] { snapshot }, retryBudget, ct);
     }

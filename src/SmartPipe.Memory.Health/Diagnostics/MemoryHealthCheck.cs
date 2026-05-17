@@ -33,7 +33,7 @@ public sealed class MemoryHealthCheck
             StoreState.Draining => MemoryHealthStatus.Degraded,
             StoreState.Drained => MemoryHealthStatus.Healthy,
             StoreState.Faulted => MemoryHealthStatus.Unhealthy,
-            _ => MemoryHealthStatus.Unhealthy
+            _ => MemoryHealthStatus.Unhealthy,
         };
     }
 
@@ -60,5 +60,5 @@ public enum MemoryHealthStatus
     Degraded,
 
     /// <summary>Store is faulted.</summary>
-    Unhealthy
+    Unhealthy,
 }

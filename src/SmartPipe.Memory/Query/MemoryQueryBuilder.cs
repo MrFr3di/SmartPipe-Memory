@@ -55,7 +55,12 @@ public sealed class MemoryQueryBuilder
     /// <summary>Filter by a property of the node's health vector.</summary>
     public MemoryQueryBuilder Where(string property, FilterOperator op, double value)
     {
-        var filter = new FilterNode.PropertyFilter { Property = property, Operator = op, Value = value };
+        var filter = new FilterNode.PropertyFilter
+        {
+            Property = property,
+            Operator = op,
+            Value = value,
+        };
 
         if (_filter is null)
         {
@@ -134,7 +139,8 @@ public sealed class MemoryQueryBuilder
     /// <summary>Maximum traversal depth.</summary>
     public MemoryQueryBuilder MaxDepth(int depth)
     {
-        if (depth <= 0) throw new ArgumentOutOfRangeException(nameof(depth), "Depth must be positive.");
+        if (depth <= 0)
+            throw new ArgumentOutOfRangeException(nameof(depth), "Depth must be positive.");
         _maxDepth = depth;
         return this;
     }
@@ -142,7 +148,8 @@ public sealed class MemoryQueryBuilder
     /// <summary>Maximum number of results.</summary>
     public MemoryQueryBuilder Limit(int limit)
     {
-        if (limit <= 0) throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be positive.");
+        if (limit <= 0)
+            throw new ArgumentOutOfRangeException(nameof(limit), "Limit must be positive.");
         _limit = limit;
         return this;
     }
@@ -191,7 +198,11 @@ public sealed class MemoryQueryBuilder
     /// </summary>
     public MemoryQueryBuilder MinWeight(double weight)
     {
-        if (weight < 0 || weight > 1) throw new ArgumentOutOfRangeException(nameof(weight), "Weight must be between 0 and 1.");
+        if (weight < 0 || weight > 1)
+            throw new ArgumentOutOfRangeException(
+                nameof(weight),
+                "Weight must be between 0 and 1."
+            );
         _minWeight = weight;
         return this;
     }
@@ -202,7 +213,11 @@ public sealed class MemoryQueryBuilder
     /// </summary>
     public MemoryQueryBuilder MinConfidence(double confidence)
     {
-        if (confidence < 0 || confidence > 1) throw new ArgumentOutOfRangeException(nameof(confidence), "Confidence must be between 0 and 1.");
+        if (confidence < 0 || confidence > 1)
+            throw new ArgumentOutOfRangeException(
+                nameof(confidence),
+                "Confidence must be between 0 and 1."
+            );
         _minConfidence = confidence;
         return this;
     }
@@ -227,11 +242,10 @@ public sealed class MemoryQueryBuilder
             MinWeight = _minWeight,
             MinConfidence = _minConfidence,
             NodeFilter = _nodeFilter,
-            Type = _startNodeId is not null && _targetNodeId is not null
-                ? QueryType.FindPath
-                : _startNodeId is not null
-                    ? QueryType.Traverse
-                    : QueryType.FindNodes
+            Type =
+                _startNodeId is not null && _targetNodeId is not null ? QueryType.FindPath
+                : _startNodeId is not null ? QueryType.Traverse
+                : QueryType.FindNodes,
         };
 
         return _executor.ExecuteAsync(query, ct);
@@ -246,7 +260,8 @@ public sealed class MemoryQueryBuilder
     }
 
     private async IAsyncEnumerable<QueryResult> ExecuteClusterAsync(
-        [EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         var clusters = await _executor.ClusterAsync(ct);
         foreach (var cluster in clusters)
@@ -265,9 +280,7 @@ public sealed class MemoryQueryBuilder
         ArgumentException.ThrowIfNullOrEmpty(nodeId);
 
         var estimator = new Algorithms.Estimation.CardinalityEstimator();
-        return estimator.EstimateNeighbors(
-            _executor.GetOutEdges(),
-            nodeId);
+        return estimator.EstimateNeighbors(_executor.GetOutEdges(), nodeId);
     }
 
     /// <summary>
@@ -280,9 +293,7 @@ public sealed class MemoryQueryBuilder
         ArgumentException.ThrowIfNullOrEmpty(nodeId);
 
         var centrality = new Algorithms.Centrality.DegreeCentrality();
-        return centrality.Compute(
-            _executor.GetOutEdges(),
-            nodeId);
+        return centrality.Compute(_executor.GetOutEdges(), nodeId);
     }
 
     /// <summary>

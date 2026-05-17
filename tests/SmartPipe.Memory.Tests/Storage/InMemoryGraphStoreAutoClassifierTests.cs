@@ -24,8 +24,8 @@ public sealed class InMemoryGraphStoreAutoClassifierTests : IAsyncDisposable
             Properties = new Dictionary<string, object>
             {
                 ["hash"] = "abc",
-                ["path"] = "/data/file.txt"
-            }
+                ["path"] = "/data/file.txt",
+            },
         };
 
         var result = await _store.UpsertNodeAsync(node);
@@ -39,10 +39,7 @@ public sealed class InMemoryGraphStoreAutoClassifierTests : IAsyncDisposable
         {
             Id = "test",
             Type = "",
-            Properties = new Dictionary<string, object>
-            {
-                ["hash"] = "abc"
-            }
+            Properties = new Dictionary<string, object> { ["hash"] = "abc" },
         };
 
         var result = await _store.UpsertNodeAsync(node);

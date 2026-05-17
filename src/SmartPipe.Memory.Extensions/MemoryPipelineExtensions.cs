@@ -26,16 +26,16 @@ public static class MemoryPipelineExtensions
     /// <returns>The pipeline for chaining.</returns>
     public static SmartPipeChannel<TInput, TOutput> UseMemory<TInput, TOutput>(
         this SmartPipeChannel<TInput, TOutput> pipeline,
-        IGraphStore store)
+        IGraphStore store
+    )
     {
         ArgumentNullException.ThrowIfNull(pipeline);
         ArgumentNullException.ThrowIfNull(store);
 
         // Start metrics background consumer
-        var metricsChannel = Channel.CreateBounded<MetricsEntry>(new BoundedChannelOptions(10000)
-        {
-            FullMode = BoundedChannelFullMode.DropOldest
-        });
+        var metricsChannel = Channel.CreateBounded<MetricsEntry>(
+            new BoundedChannelOptions(10000) { FullMode = BoundedChannelFullMode.DropOldest }
+        );
 
         var calculator = new HealthVectorCalculator(store);
         var consumer = new MetricsBackgroundConsumer(metricsChannel.Reader, store, calculator);
@@ -62,8 +62,8 @@ public static class MemoryPipelineExtensions
                     ["ItemsProcessed"] = metrics.ItemsProcessed,
                     ["ItemsFailed"] = metrics.ItemsFailed,
                     ["AvgLatencyMs"] = metrics.AvgLatencyMs,
-                    ["SmoothThroughput"] = metrics.SmoothThroughput
-                }
+                    ["SmoothThroughput"] = metrics.SmoothThroughput,
+                },
             };
 
             metricsChannel.Writer.TryWrite(entry);
@@ -73,7 +73,12 @@ public static class MemoryPipelineExtensions
         // Stop consumer when pipeline stops
         pipeline.OnStateChanged += (oldState, newState) =>
         {
-            if (newState is PipelineState.Completed or PipelineState.Faulted or PipelineState.Cancelled)
+            if (
+                newState
+                is PipelineState.Completed
+                    or PipelineState.Faulted
+                    or PipelineState.Cancelled
+            )
             {
                 metricsChannel.Writer.Complete();
                 consumer.StopAsync();
@@ -118,7 +123,8 @@ public static class MemoryPipelineExtensions
     /// <returns>A transformer for use in a pipeline.</returns>
     public static ITransformer<T, T> TransformToEdges<T>(
         this IGraphStore store,
-        Func<T, Edge> edgeFactory)
+        Func<T, Edge> edgeFactory
+    )
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(edgeFactory);
@@ -127,7 +133,8 @@ public static class MemoryPipelineExtensions
 
     private static async Task RegisterPipelineTopologyAsync<TInput, TOutput>(
         SmartPipeChannel<TInput, TOutput> pipeline,
-        IGraphStore store)
+        IGraphStore store
+    )
     {
         var pipelineId = $"pipeline_{typeof(TInput).Name}_{typeof(TOutput).Name}";
 
@@ -135,7 +142,7 @@ public static class MemoryPipelineExtensions
         {
             Id = pipelineId,
             Type = "Pipeline",
-            Label = $"Pipeline<{typeof(TInput).Name}, {typeof(TOutput).Name}>"
+            Label = $"Pipeline<{typeof(TInput).Name}, {typeof(TOutput).Name}>",
         };
 
         await store.UpsertNodeAsync(pipelineNode);
@@ -157,12 +164,13 @@ public static class MemoryPipelineExtensions
         public Task InitializeAsync(CancellationToken ct) => Task.CompletedTask;
 
         public async IAsyncEnumerable<ProcessingContext<Node>> ReadAsync(
-            [EnumeratorCancellation] CancellationToken ct)
+            [EnumeratorCancellation] CancellationToken ct
+        )
         {
             var query = new Model.MemoryQuery
             {
                 NodeType = _nodeType,
-                Type = Model.QueryType.FindNodes
+                Type = Model.QueryType.FindNodes,
             };
 
             await foreach (var node in _store.QueryNodesAsync(query, ct))
@@ -213,7 +221,9 @@ public static class MemoryPipelineExtensions
         public Task InitializeAsync(CancellationToken ct) => Task.CompletedTask;
 
         public async ValueTask<ProcessingResult<T>> TransformAsync(
-            ProcessingContext<T> ctx, CancellationToken ct)
+            ProcessingContext<T> ctx,
+            CancellationToken ct
+        )
         {
             var edge = _edgeFactory(ctx.Payload);
             await _store.UpsertEdgeAsync(edge, ct);
