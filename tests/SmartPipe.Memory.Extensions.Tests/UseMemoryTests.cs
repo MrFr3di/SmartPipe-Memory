@@ -48,7 +48,7 @@ public sealed class UseMemoryTests : IAsyncDisposable
 
         await pipeline.RunAsync();
 
-        Assert.Equal(StoreState.Running, _store.State);
+        Assert.Equal(StoreState.Drained, _store.State);
     }
 
     [Fact]

@@ -19,7 +19,7 @@ public sealed class MemoryHealthCheckTests
     {
         var store = new InMemoryGraphStore();
         var check = new MemoryHealthCheck(store);
-        await store.DrainAsync();
+        await store.DrainAsync(CancellationToken.None);
 
         Assert.Equal(MemoryHealthStatus.Healthy, check.Check());
     }

@@ -8,7 +8,7 @@ namespace SmartPipe.Memory.Health;
 /// </summary>
 public sealed class HealthMetrics
 {
-    private static readonly Meter _meter = new("SmartPipe.Memory.Health", "0.2.0");
+    private static readonly Meter _meter = new("SmartPipe.Memory.Health", "0.1.3");
 
     // Full implementation in v0.2.0
 }

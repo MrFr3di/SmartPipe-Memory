@@ -25,7 +25,7 @@ public sealed class SqliteWALStore : IGraphStore
     private readonly TimeSpan _checkpointInterval;
 
     private readonly Channel<MetricsEntry> _metricsChannel;
-    private readonly List<Insight> _insights = new();
+    private readonly List<Insight> _insights = [];
     private StoreState _state = StoreState.Running;
 
     /// <summary>

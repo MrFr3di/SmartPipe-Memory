@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>0.1.2</Version>
+    <Version>0.1.3</Version>
     <Authors>SmartPipe</Authors>
     <Description>
       Integration library connecting SmartPipe.Memory with SmartPipe.Core ETL pipelines.

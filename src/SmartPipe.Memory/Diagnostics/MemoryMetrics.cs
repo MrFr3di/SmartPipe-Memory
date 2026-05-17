@@ -15,7 +15,7 @@ public sealed class MemoryMetrics
     /// </summary>
     public const string MeterName = "SmartPipe.Memory";
 
-    private static readonly Meter _meter = new(MeterName, "0.1.2");
+    private static readonly Meter _meter = new(MeterName, "0.1.3");
 
     private readonly UpDownCounter<long> _nodesTotal;
     private readonly UpDownCounter<long> _edgesTotal;

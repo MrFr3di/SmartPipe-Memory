@@ -48,6 +48,17 @@ public static class MemoryPipelineExtensions
             {
                 await RegisterPipelineTopologyAsync(pipeline, store);
             }
+            else if (
+                newState
+                is PipelineState.Completed
+                    or PipelineState.Faulted
+                    or PipelineState.Cancelled
+            )
+            {
+                metricsChannel.Writer.Complete();
+                await consumer.StopAsync();
+                await store.DrainAsync(CancellationToken.None);
+            }
         };
 
         // Stream metrics to the store
@@ -68,21 +79,6 @@ public static class MemoryPipelineExtensions
 
             metricsChannel.Writer.TryWrite(entry);
             store.MetricsChannel.TryWrite(entry);
-        };
-
-        // Stop consumer when pipeline stops
-        pipeline.OnStateChanged += (oldState, newState) =>
-        {
-            if (
-                newState
-                is PipelineState.Completed
-                    or PipelineState.Faulted
-                    or PipelineState.Cancelled
-            )
-            {
-                metricsChannel.Writer.Complete();
-                consumer.StopAsync();
-            }
         };
 
         return pipeline;
