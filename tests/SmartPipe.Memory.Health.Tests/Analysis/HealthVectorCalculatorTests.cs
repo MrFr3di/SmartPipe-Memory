@@ -20,7 +20,7 @@ public sealed class HealthVectorCalculatorTests : IAsyncDisposable
     [Fact]
     public async Task ComputeAsync_EmptyHistory_ReturnsDefaultHealth()
     {
-        var health = await _calculator.ComputeAsync("n1", Array.Empty<MetricsEntry>(), 3);
+        var health = await _calculator.ComputeAsync("n1", [], 3);
 
         Assert.Equal(1.0, health.HealthScore);
         Assert.Equal(0, health.PredictedLatencyMs);

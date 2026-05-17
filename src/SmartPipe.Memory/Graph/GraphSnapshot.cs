@@ -6,10 +6,10 @@ namespace SmartPipe.Memory.Graph;
 public sealed record GraphSnapshot
 {
     /// <summary>All nodes in the graph.</summary>
-    public IReadOnlyList<Node> Nodes { get; init; } = Array.Empty<Node>();
+    public IReadOnlyList<Node> Nodes { get; init; } = [];
 
     /// <summary>All edges in the graph.</summary>
-    public IReadOnlyList<Edge> Edges { get; init; } = Array.Empty<Edge>();
+    public IReadOnlyList<Edge> Edges { get; init; } = [];
 
     /// <summary>Schema version at export time.</summary>
     public int SchemaVersion { get; init; } = 1;

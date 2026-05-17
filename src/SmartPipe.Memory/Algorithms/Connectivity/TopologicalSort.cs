@@ -14,13 +14,13 @@ public static class TopologicalSort
     public sealed class Result
     {
         /// <summary>Nodes in topological order. If the graph has cycles, this is a partial order.</summary>
-        public IReadOnlyList<string> Sorted { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> Sorted { get; init; } = [];
 
         /// <summary>Whether the graph contains at least one cycle.</summary>
         public bool HasCycles { get; init; }
 
         /// <summary>Nodes that are part of cycles (not present in sorted order).</summary>
-        public IReadOnlyList<string> CyclicNodes { get; init; } = Array.Empty<string>();
+        public IReadOnlyList<string> CyclicNodes { get; init; } = [];
     }
 
     /// <summary>

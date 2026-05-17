@@ -102,7 +102,7 @@ public sealed class CognitiveConsolidation
 
         var ofType = allInsights.Where(i => i.Type == insightType).ToList();
         if (ofType.Count < MinOccurrences)
-            return Array.Empty<Insight>();
+            return [];
 
         // Group by overlapping related nodes
         var groups = GroupByOverlap(ofType);

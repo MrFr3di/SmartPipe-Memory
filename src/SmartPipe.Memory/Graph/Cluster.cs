@@ -9,7 +9,7 @@ public sealed record Cluster
     public string Id { get; init; } = string.Empty;
 
     /// <summary>Node identifiers in this cluster.</summary>
-    public IReadOnlyList<string> NodeIds { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> NodeIds { get; init; } = [];
 
     /// <summary>Number of nodes in this cluster.</summary>
     public int Size => NodeIds.Count;

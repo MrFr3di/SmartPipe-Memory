@@ -380,7 +380,7 @@ public sealed class InMemoryGraphStore : IGraphStore
         if (_outEdges.TryGetValue(nodeId, out var edges))
             return Task.FromResult<IReadOnlyList<Edge>>(edges.Where(e => e.Weight < 0.3).ToList());
 
-        return Task.FromResult<IReadOnlyList<Edge>>(Array.Empty<Edge>());
+        return Task.FromResult<IReadOnlyList<Edge>>([]);
     }
 
     /// <inheritdoc />

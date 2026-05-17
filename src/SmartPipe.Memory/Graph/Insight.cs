@@ -20,7 +20,7 @@ public sealed record Insight
     public string? Description { get; init; }
 
     /// <summary>Related node identifiers.</summary>
-    public IReadOnlyList<string> RelatedNodeIds { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<string> RelatedNodeIds { get; init; } = [];
 
     /// <summary>Confidence 0..1.</summary>
     public double Confidence { get; init; }

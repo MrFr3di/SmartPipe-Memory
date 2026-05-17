@@ -1,19 +1,12 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using SmartPipe.Memory.Graph;
+using SmartPipe.Memory.Infrastructure;
 
 namespace SmartPipe.Memory.Storage;
 
-/// <summary>
-/// Shared graph traversal logic used by InMemoryGraphStore and DiskBackedGraphStore.
-/// Provides BFS-based pathfinding and traversal with support for node filtering,
-/// minimum edge weight, and minimum edge confidence.
-/// </summary>
 internal static class GraphTraversalEngine
 {
-    /// <summary>
-    /// Find the shortest path between two nodes using BFS.
-    /// </summary>
     public static IReadOnlyList<PathSegment> FindPath(
         ConcurrentDictionary<string, Node> nodes,
         ConcurrentDictionary<string, List<Edge>> outEdges,
@@ -28,27 +21,33 @@ internal static class GraphTraversalEngine
     )
     {
         if (!nodes.ContainsKey(fromNodeId) || !nodes.ContainsKey(toNodeId))
-            return Array.Empty<PathSegment>();
+            return [];
 
+        var nodeList = nodes.Keys.ToList();
+        var nodeIndex = new Dictionary<string, int>(nodeList.Count);
+        for (int i = 0; i < nodeList.Count; i++)
+            nodeIndex[nodeList[i]] = i;
+
+        var visited = new FastBitArray(nodeList.Count);
         var parent = new Dictionary<string, (string NodeId, string EdgeType, double Weight)>();
-        var queue = new Queue<(string NodeId, int Depth)>();
-        var visited = new HashSet<string>();
+        var queue = new (string NodeId, int Depth)[nodeList.Count];
+        int head = 0,
+            tail = 0;
 
-        queue.Enqueue((fromNodeId, 0));
-        visited.Add(fromNodeId);
+        int startIndex = nodeIndex[fromNodeId];
+        visited.Set(startIndex);
+        queue[tail++] = (fromNodeId, 0);
 
-        while (queue.Count > 0)
+        while (head < tail)
         {
             ct.ThrowIfCancellationRequested();
-
-            var (currentId, depth) = queue.Dequeue();
+            var (currentId, depth) = queue[head++];
 
             if (currentId == toNodeId)
                 return ReconstructPath(parent, fromNodeId, toNodeId);
 
             if (depth >= maxDepth)
                 continue;
-
             if (!outEdges.TryGetValue(currentId, out var outgoing))
                 continue;
 
@@ -56,33 +55,28 @@ internal static class GraphTraversalEngine
             {
                 if (edge.Type.ToString() != edgeType)
                     continue;
-
                 if (minWeight.HasValue && edge.Weight < minWeight.Value)
                     continue;
-
                 if (minConfidence.HasValue && edge.Confidence < minConfidence.Value)
                     continue;
 
-                if (nodeFilter is not null && nodes.TryGetValue(edge.ToNodeId, out var targetNode))
-                {
-                    if (!nodeFilter(targetNode))
-                        continue;
-                }
-
-                if (!visited.Add(edge.ToNodeId))
+                int neighborIndex = nodeIndex[edge.ToNodeId];
+                if (visited.IsSet(neighborIndex))
                     continue;
 
+                if (nodeFilter is not null && nodes.TryGetValue(edge.ToNodeId, out var targetNode))
+                    if (!nodeFilter(targetNode))
+                        continue;
+
+                visited.Set(neighborIndex);
                 parent[edge.ToNodeId] = (currentId, edge.Type.ToString(), edge.Weight);
-                queue.Enqueue((edge.ToNodeId, depth + 1));
+                queue[tail++] = (edge.ToNodeId, depth + 1);
             }
         }
 
-        return Array.Empty<PathSegment>();
+        return [];
     }
 
-    /// <summary>
-    /// Traverse the graph from a starting node.
-    /// </summary>
     public static async IAsyncEnumerable<(Node Node, int Depth)> Traverse(
         ConcurrentDictionary<string, Node> nodes,
         ConcurrentDictionary<string, List<Edge>> outEdges,
@@ -96,20 +90,28 @@ internal static class GraphTraversalEngine
         [EnumeratorCancellation] CancellationToken ct
     )
     {
-        if (!nodes.TryGetValue(startNodeId, out var startNode))
+        if (!nodes.ContainsKey(startNodeId))
             yield break;
 
-        var visited = new HashSet<string>();
-        var queue = new Queue<(string NodeId, int Depth)>();
-        queue.Enqueue((startNodeId, 0));
-        visited.Add(startNodeId);
+        var nodeList = nodes.Keys.ToList();
+        var nodeIndex = new Dictionary<string, int>(nodeList.Count);
+        for (int i = 0; i < nodeList.Count; i++)
+            nodeIndex[nodeList[i]] = i;
 
-        var count = 0;
-        while (queue.Count > 0 && count < limit)
+        var visited = new FastBitArray(nodeList.Count);
+        var queue = new (string NodeId, int Depth)[nodeList.Count];
+        int head = 0,
+            tail = 0;
+
+        int startIndex = nodeIndex[startNodeId];
+        visited.Set(startIndex);
+        queue[tail++] = (startNodeId, 0);
+
+        int count = 0;
+        while (head < tail && count < limit)
         {
             ct.ThrowIfCancellationRequested();
-
-            var (currentId, depth) = queue.Dequeue();
+            var (currentId, depth) = queue[head++];
 
             if (nodes.TryGetValue(currentId, out var currentNode))
             {
@@ -122,7 +124,6 @@ internal static class GraphTraversalEngine
 
             if (depth >= maxDepth)
                 continue;
-
             if (!outEdges.TryGetValue(currentId, out var outgoing))
                 continue;
 
@@ -130,21 +131,21 @@ internal static class GraphTraversalEngine
             {
                 if (edge.Type.ToString() != edgeType)
                     continue;
-
                 if (minWeight.HasValue && edge.Weight < minWeight.Value)
                     continue;
-
                 if (minConfidence.HasValue && edge.Confidence < minConfidence.Value)
                     continue;
 
+                int neighborIndex = nodeIndex[edge.ToNodeId];
+                if (visited.IsSet(neighborIndex))
+                    continue;
+
                 if (nodeFilter is not null && nodes.TryGetValue(edge.ToNodeId, out var targetNode))
-                {
                     if (!nodeFilter(targetNode))
                         continue;
-                }
 
-                if (visited.Add(edge.ToNodeId))
-                    queue.Enqueue((edge.ToNodeId, depth + 1));
+                visited.Set(neighborIndex);
+                queue[tail++] = (edge.ToNodeId, depth + 1);
             }
         }
     }
